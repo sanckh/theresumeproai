@@ -23,6 +23,7 @@ export interface JobEntry {
 export interface ResumeData {
   id?: string;
   user_id: string;
+  name: string;
   data: {
     fullName: string;
     email: string;
@@ -36,18 +37,37 @@ export interface ResumeData {
   updated_at?: string;
 }
 
-export const saveResumeToDatabase = async (userId: string, resumeData: ResumeData['data']) => {
+export interface SavedResume {
+  id: string;
+  user_id: string;
+  name: string;
+  data: ResumeData['data'];
+  created_at: string;
+  updated_at: string;
+}
+
+export const saveResumeToDatabase = async (
+  userId: string, 
+  resumeData: ResumeData['data'],
+  name: string = "Untitled Resume",
+  resumeId?: string
+) => {
   try {
-    const resumeRef = doc(collection(db, 'resumes'));
+    // If resumeId is provided, update existing resume, otherwise create new
+    const resumeRef = resumeId 
+      ? doc(db, 'resumes', resumeId)
+      : doc(collection(db, 'resumes'));
+
     const resumeDoc = {
-      id: resumeRef.id,
+      id: resumeId || resumeRef.id,
       user_id: userId,
+      name,
       data: resumeData,
-      created_at: new Date().toISOString(),
+      created_at: resumeId ? undefined : new Date().toISOString(), // Only set on creation
       updated_at: new Date().toISOString(),
     };
 
-    await setDoc(resumeRef, resumeDoc);
+    await setDoc(resumeRef, resumeDoc, { merge: true });
     return resumeDoc;
   } catch (error) {
     console.error('Error saving resume:', error);
@@ -55,24 +75,16 @@ export const saveResumeToDatabase = async (userId: string, resumeData: ResumeDat
   }
 };
 
-export const loadResumeFromDatabase = async (userId: string) => {
+export const loadResumeFromDatabase = async (userId: string, resumeId: string) => {
   try {
-    const resumesRef = collection(db, 'resumes');
-    const q = query(
-      resumesRef,
-      where('user_id', '==', userId),
-      orderBy('updated_at', 'desc'),
-      limit(1)
-    );
-
-    const querySnapshot = await getDocs(q);
-    const doc = querySnapshot.docs[0];
+    const resumeRef = doc(db, 'resumes', resumeId);
+    const resumeDoc = await getDoc(resumeRef);
     
-    if (!doc) {
+    if (!resumeDoc.exists() || resumeDoc.data().user_id !== userId) {
       return null;
     }
 
-    return doc.data().data;
+    return resumeDoc.data();
   } catch (error) {
     console.error('Error loading resume:', error);
     throw error;
@@ -89,18 +101,14 @@ export const getAllResumes = async (userId: string) => {
     );
 
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => {
-      const data = doc.data() as ResumeData;
-      return {
-        id: doc.id,
-        user_id: data.user_id,
-        data: data.data,
-        created_at: data.created_at,
-        updated_at: data.updated_at
-      } as ResumeData;
-    });
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      name: doc.data().name || 'Untitled Resume',
+      data: doc.data().data || {},
+      updated_at: doc.data().updated_at || new Date().toISOString()
+    }));
   } catch (error) {
-    console.error('Error getting all resumes:', error);
+    console.error('Error getting resumes:', error);
     throw error;
   }
 };

@@ -15,9 +15,18 @@ interface Job {
   startDate: string;
   endDate: string;
   description: string;
+  location?: string;
 }
 
-export const ResumeForm = ({ onUpdate }: { onUpdate: (data: any) => void }) => {
+export const ResumeForm = ({ onUpdate }: { onUpdate: (data: {
+  fullName: string;
+  email: string;
+  phone: string;
+  summary: string;
+  jobs: Job[];
+  education: string;
+  skills: string;
+}) => void }) => {
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -91,13 +100,9 @@ export const ResumeForm = ({ onUpdate }: { onUpdate: (data: any) => void }) => {
         </p>
       </div>
 
-      <div className="flex justify-end mb-4">
-        <Button
-          onClick={enhanceResume}
-          disabled={isEnhancing}
-          className="flex items-center gap-2"
-        >
-          <Wand2 className="h-4 w-4" />
+      <div className="flex gap-4 mt-4">
+        <Button onClick={enhanceResume} disabled={isEnhancing}>
+          <Wand2 className="w-4 h-4 mr-2" />
           {isEnhancing ? "Enhancing..." : "Enhance with AI"}
         </Button>
       </div>
