@@ -11,6 +11,15 @@ import {
 } from '@firebase/firestore';
 import { db } from '../firebase_options';
 
+export interface JobEntry {
+  company: string;
+  title: string;
+  startDate: string;
+  endDate?: string;
+  description?: string;
+  location?: string;
+}
+
 export interface ResumeData {
   id?: string;
   user_id: string;
@@ -19,7 +28,7 @@ export interface ResumeData {
     email: string;
     phone: string;
     summary: string;
-    jobs: any[];
+    jobs: JobEntry[];
     education: string;
     skills: string;
   };
@@ -80,10 +89,16 @@ export const getAllResumes = async (userId: string) => {
     );
 
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({
-      ...doc.data(),
-      id: doc.id
-    }));
+    return querySnapshot.docs.map(doc => {
+      const data = doc.data() as ResumeData;
+      return {
+        id: doc.id,
+        user_id: data.user_id,
+        data: data.data,
+        created_at: data.created_at,
+        updated_at: data.updated_at
+      } as ResumeData;
+    });
   } catch (error) {
     console.error('Error getting all resumes:', error);
     throw error;

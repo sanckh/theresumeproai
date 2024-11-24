@@ -6,15 +6,15 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Clock, FileText, Star } from "lucide-react";
 import { format } from "date-fns";
-import { getAllResumes } from "@/utils/database";
+import { getAllResumes, ResumeData } from "@/utils/database";
 
 const History = () => {
   const { user } = useAuth();
 
-  const { data: resumes, isLoading } = useQuery({
-    queryKey: ["resumes", user?.id],
-    queryFn: () => getAllResumes(user?.id as string),
-    enabled: !!user?.id,
+  const { data: resumes, isLoading } = useQuery<ResumeData[]>({
+    queryKey: ["resumes", user?.uid],
+    queryFn: () => getAllResumes(user?.uid as string),
+    enabled: !!user?.uid,
   });
 
   if (!user) {

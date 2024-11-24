@@ -35,9 +35,9 @@ const Builder = () => {
   useEffect(() => {
     const loadSavedResume = async () => {
       try {
-        if (user?.id) {
+        if (user?.uid) {
           // Try to load from database first
-          const dbData = await loadResumeFromDatabase(user.id);
+          const dbData = await loadResumeFromDatabase(user.uid);
           if (dbData) {
             setResumeData(dbData);
             toast.info("Loaded your resume from cloud storage");
@@ -58,16 +58,16 @@ const Builder = () => {
     };
 
     loadSavedResume();
-  }, [user?.id]);
+  }, [user?.uid]);
 
   const handleSave = async () => {
     try {
       // Always save to localStorage as backup
       localStorage.setItem(STORAGE_KEY, JSON.stringify(resumeData));
 
-      if (user?.id) {
+      if (user?.uid) {
         // If user is authenticated, also save to database
-        await saveResumeToDatabase(user.id, resumeData);
+        await saveResumeToDatabase(user.uid, resumeData);
         toast.success("Resume saved successfully to cloud storage!");
       } else {
         toast.success("Resume saved successfully to browser storage!");

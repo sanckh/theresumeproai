@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import { ResumeData } from './database';
 
 let openai: OpenAI | null = null;
 
@@ -56,7 +57,7 @@ export const analyzeResume = async (resumeText: string): Promise<{
   }
 };
 
-export const enhanceWithAI = async (resumeData: any) => {
+export const enhanceWithAI = async (resumeData: ResumeData['data']) => {
   if (!openai || !import.meta.env.VITE_OPENAI_API_KEY || import.meta.env.VITE_OPENAI_API_KEY === 'dummy-key') {
     throw new Error('OpenAI API key not configured');
   }
@@ -72,7 +73,7 @@ export const enhanceWithAI = async (resumeData: any) => {
         content: JSON.stringify(resumeData)
       }
     ],
-    model: "gpt-4",
+    model: "gpt-4o-mini",
     response_format: { type: "json_object" }
   });
 
