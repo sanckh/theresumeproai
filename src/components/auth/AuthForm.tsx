@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,8 +17,13 @@ import * as z from "zod";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
-const formSchema = z.object({
+const baseSchema = {
   email: z.string().email("Please enter a valid email address"),
+  password: z.string().min(1, "Password is required"),
+};
+
+const signUpSchema = z.object({
+  ...baseSchema,
   password: z
     .string()
     .min(8, "Password must be at least 8 characters")
@@ -26,18 +31,28 @@ const formSchema = z.object({
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
       "Password must contain at least one uppercase letter, one lowercase letter, and one number"
     ),
-  confirmPassword: z.string(),
+  confirmPassword: z.string().min(1, "Please confirm your password"),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
 });
 
-type FormData = z.infer<typeof formSchema>;
+const signInSchema = z.object(baseSchema);
+
+type SignUpFormData = z.infer<typeof signUpSchema>;
+type SignInFormData = z.infer<typeof signInSchema>;
+type FormData = SignUpFormData | SignInFormData;
 
 interface AuthFormProps {
   isSignUp: boolean;
   onToggleMode: () => void;
 }
+
+const defaultValues = {
+  email: "",
+  password: "",
+  confirmPassword: "",
+};
 
 export const AuthForm = ({ isSignUp, onToggleMode }: AuthFormProps) => {
   const [showPassword, setShowPassword] = useState(false);
@@ -46,13 +61,15 @@ export const AuthForm = ({ isSignUp, onToggleMode }: AuthFormProps) => {
   const navigate = useNavigate();
 
   const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-      confirmPassword: "",
-    },
+    resolver: zodResolver(isSignUp ? signUpSchema : signInSchema),
+    defaultValues,
+    mode: "onChange",
   });
+
+  // Reset form when switching modes
+  useEffect(() => {
+    form.reset(defaultValues);
+  }, [isSignUp, form]);
 
   const onSubmit = async (data: FormData) => {
     try {
@@ -64,7 +81,7 @@ export const AuthForm = ({ isSignUp, onToggleMode }: AuthFormProps) => {
           toast.success(
             "Account created successfully! Please check your email to verify your account."
           );
-          form.reset();
+          form.reset(defaultValues);
         } else {
           toast.success("Account created successfully!");
           navigate("/");
@@ -89,7 +106,11 @@ export const AuthForm = ({ isSignUp, onToggleMode }: AuthFormProps) => {
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input type="email" placeholder="Enter your email" {...field} />
+                <Input 
+                  type="email" 
+                  placeholder="Enter your email" 
+                  {...field} 
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -170,10 +191,11 @@ export const AuthForm = ({ isSignUp, onToggleMode }: AuthFormProps) => {
 
         <div className="text-center">
           <Button
+            type="button"
             variant="link"
             onClick={() => {
+              form.reset(defaultValues);
               onToggleMode();
-              form.reset();
             }}
             className="text-sm"
           >

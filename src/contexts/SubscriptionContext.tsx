@@ -1,15 +1,7 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
-}
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { db } from "../firebase_options";
+import { doc, getDoc } from "firebase/firestore";
 
 type SubscriptionTier = 'free' | 'premium' | 'pro';
 
@@ -37,14 +29,11 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
 
     try {
-      const { data: subscription } = await supabase
-        .from('subscriptions')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      if (subscription) {
-        setTier(subscription.tier);
+      const subscriptionDoc = await getDoc(doc(db, 'subscriptions', user.uid));
+      
+      if (subscriptionDoc.exists()) {
+        const subscription = subscriptionDoc.data();
+        setTier(subscription.tier as SubscriptionTier);
         setHasUsedCreatorTrial(subscription.has_used_creator_trial || false);
         setHasUsedReviewerTrial(subscription.has_used_reviewer_trial || false);
       } else {
@@ -54,6 +43,10 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       }
     } catch (error) {
       console.error('Error fetching subscription:', error);
+      // Set default values on error
+      setTier('free');
+      setHasUsedCreatorTrial(false);
+      setHasUsedReviewerTrial(false);
     }
   };
 

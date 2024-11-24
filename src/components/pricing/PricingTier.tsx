@@ -5,16 +5,8 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
-}
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { db } from "@/firebase_options";
+import { doc, setDoc } from "firebase/firestore";
 
 type PricingTierProps = {
   name: string;
@@ -60,25 +52,22 @@ export const PricingTier = ({
     // Handle one-time trial activation
     if (trialType && canUseTrial) {
       try {
-        const updateData = {
-          user_id: user.id,
-          tier: 'premium',
-          ...(trialType === 'creator' ? { has_used_creator_trial: true } : { has_used_reviewer_trial: true }),
+        const subscriptionData = {
+          tier: 'premium' as const,
+          has_used_creator_trial: trialType === 'creator' ? true : hasUsedCreatorTrial,
+          has_used_reviewer_trial: trialType === 'reviewer' ? true : hasUsedReviewerTrial,
+          updated_at: new Date().toISOString(),
         };
 
-        const { error } = await supabase
-          .from('subscriptions')
-          .upsert(updateData);
-
-        if (error) throw error;
+        await setDoc(doc(db, 'subscriptions', user.uid), subscriptionData, { merge: true });
 
         await checkSubscription();
         toast.success(`${trialType === 'creator' ? 'Creator' : 'Reviewer'} trial activated successfully!`);
         navigate("/builder");
         return;
       } catch (error) {
+        console.error('Error activating trial:', error);
         toast.error("Failed to activate trial");
-        console.error(error);
         return;
       }
     }
@@ -101,8 +90,8 @@ export const PricingTier = ({
       const session = await response.json();
       window.location.href = session.url;
     } catch (error) {
-      toast.error("Failed to initiate checkout");
       console.error("Error:", error);
+      toast.error("Failed to initiate checkout");
     }
   };
 

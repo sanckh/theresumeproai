@@ -1,14 +1,13 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { createClient, User } from "@supabase/supabase-js";
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
-}
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { 
+  User,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut as firebaseSignOut,
+  onAuthStateChanged,
+  sendEmailVerification
+} from "firebase/auth";
+import { auth } from "../firebase_options";
 
 type AuthContextType = {
   user: User | null;
@@ -25,51 +24,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
+    return () => unsubscribe();
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+      console.error("Sign in error:", error);
+      throw error;
+    }
   };
 
   const signUp = async (email: string, password: string) => {
-    const redirectTo = `${window.location.origin}/auth?source=email_confirmation`;
-    
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectTo,
-        data: {
-          redirect_url: redirectTo,
-        }
-      }
-    });
-    
-    if (error) {
-      console.error("Signup error:", error);
-      return { error, confirmEmail: false };
-    }
+    try {
+      const { user } = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Send email verification
+      await sendEmailVerification(user, {
+        url: `${window.location.origin}/auth?source=email_confirmation`,
+      });
 
-    // If data.user exists but session is null, email confirmation is required
-    const confirmEmail = !!data.user && !data.session;
-    console.log("Signup response:", { user: data.user, session: data.session, confirmEmail });
-    return { error: null, confirmEmail };
+      return { error: null, confirmEmail: true };
+    } catch (error) {
+      console.error("Sign up error:", error);
+      return { error: error as Error, confirmEmail: false };
+    }
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    try {
+      await firebaseSignOut(auth);
+    } catch (error) {
+      console.error("Sign out error:", error);
+      throw error;
+    }
   };
 
   return (

@@ -1,13 +1,15 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
-}
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { 
+  collection, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  query, 
+  where, 
+  orderBy, 
+  limit, 
+  getDocs 
+} from '@firebase/firestore';
+import { db } from '../firebase_options';
 
 export interface ResumeData {
   id?: string;
@@ -26,43 +28,64 @@ export interface ResumeData {
 }
 
 export const saveResumeToDatabase = async (userId: string, resumeData: ResumeData['data']) => {
-  const { data, error } = await supabase
-    .from('resumes')
-    .upsert({
+  try {
+    const resumeRef = doc(collection(db, 'resumes'));
+    const resumeDoc = {
+      id: resumeRef.id,
       user_id: userId,
       data: resumeData,
+      created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-    })
-    .select()
-    .single();
+    };
 
-  if (error) throw error;
-  return data;
+    await setDoc(resumeRef, resumeDoc);
+    return resumeDoc;
+  } catch (error) {
+    console.error('Error saving resume:', error);
+    throw error;
+  }
 };
 
 export const loadResumeFromDatabase = async (userId: string) => {
-  const { data, error } = await supabase
-    .from('resumes')
-    .select()
-    .eq('user_id', userId)
-    .order('updated_at', { ascending: false })
-    .limit(1)
-    .single();
+  try {
+    const resumesRef = collection(db, 'resumes');
+    const q = query(
+      resumesRef,
+      where('user_id', '==', userId),
+      orderBy('updated_at', 'desc'),
+      limit(1)
+    );
 
-  if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+    const querySnapshot = await getDocs(q);
+    const doc = querySnapshot.docs[0];
+    
+    if (!doc) {
+      return null;
+    }
+
+    return doc.data().data;
+  } catch (error) {
+    console.error('Error loading resume:', error);
     throw error;
   }
-
-  return data?.data;
 };
 
 export const getAllResumes = async (userId: string) => {
-  const { data, error } = await supabase
-    .from('resumes')
-    .select('*')
-    .eq('user_id', userId)
-    .order('updated_at', { ascending: false });
+  try {
+    const resumesRef = collection(db, 'resumes');
+    const q = query(
+      resumesRef,
+      where('user_id', '==', userId),
+      orderBy('updated_at', 'desc')
+    );
 
-  if (error) throw error;
-  return data;
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({
+      ...doc.data(),
+      id: doc.id
+    }));
+  } catch (error) {
+    console.error('Error getting all resumes:', error);
+    throw error;
+  }
 };
