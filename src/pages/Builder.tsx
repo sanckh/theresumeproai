@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Header } from "@/components/Header";
 import { ResumeForm } from "@/components/ResumeForm";
 import { ResumePreview } from "@/components/ResumePreview";
@@ -9,11 +9,14 @@ import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { saveResumeToDatabase, loadResumeFromDatabase } from "@/utils/database";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 const STORAGE_KEY = "saved_resume";
 
 const Builder = () => {
   const { user } = useAuth();
+  const resumeRef = useRef<HTMLDivElement>(null);
   const [resumeData, setResumeData] = useState({
     fullName: "",
     email: "",
@@ -26,6 +29,7 @@ const Builder = () => {
 
   const [selectedTemplate, setSelectedTemplate] = useState("modern");
   const [showTemplates, setShowTemplates] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   // Load saved resume data on component mount
   useEffect(() => {
@@ -74,8 +78,54 @@ const Builder = () => {
     }
   };
 
-  const handleDownload = () => {
-    toast.success("Download started!");
+  const handleDownload = async () => {
+    if (!resumeRef.current || isDownloading) return;
+
+    try {
+      setIsDownloading(true);
+      toast.info("Preparing your PDF...");
+
+      // Create a clone of the resume preview for better PDF generation
+      const resumeElement = resumeRef.current;
+      const scale = 2; // Increase quality
+
+      const canvas = await html2canvas(resumeElement, {
+        scale: scale,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+      });
+
+      const imgWidth = 210; // A4 width in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      const pdf = new jsPDF({
+        orientation: imgHeight > imgWidth ? "portrait" : "landscape",
+        unit: "mm",
+      });
+
+      pdf.addImage(
+        canvas.toDataURL("image/jpeg", 1.0),
+        "JPEG",
+        0,
+        0,
+        imgWidth,
+        imgHeight
+      );
+
+      // Generate filename based on user's name or default
+      const fileName = resumeData.fullName
+        ? `${resumeData.fullName.replace(/\s+/g, "_")}_Resume.pdf`
+        : "Resume.pdf";
+
+      pdf.save(fileName);
+      toast.success("Resume downloaded successfully!");
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toast.error("Failed to generate PDF. Please try again.");
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   return (
@@ -92,8 +142,11 @@ const Builder = () => {
             <Button variant="outline" onClick={handleSave}>
               Save
             </Button>
-            <Button onClick={handleDownload}>
-              Download PDF
+            <Button 
+              onClick={handleDownload}
+              disabled={isDownloading}
+            >
+              {isDownloading ? "Generating PDF..." : "Download PDF"}
             </Button>
           </div>
         </div>
@@ -120,7 +173,9 @@ const Builder = () => {
                 <ResumeForm onUpdate={setResumeData} />
               </div>
               <div className="lg:sticky lg:top-8 space-y-6">
-                <ResumePreview data={resumeData} template={selectedTemplate} />
+                <div ref={resumeRef}>
+                  <ResumePreview data={resumeData} template={selectedTemplate} />
+                </div>
               </div>
             </div>
           </TabsContent>
