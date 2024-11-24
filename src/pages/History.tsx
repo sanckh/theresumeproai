@@ -11,9 +11,9 @@ import { getAllResumes, ResumeData } from "@/utils/database";
 const History = () => {
   const { user } = useAuth();
 
-  const { data: resumes, isLoading } = useQuery<ResumeData[]>({
+  const { data: resumes, isLoading } = useQuery({
     queryKey: ["resumes", user?.uid],
-    queryFn: () => getAllResumes(user?.uid as string),
+    queryFn: getAllResumes,
     enabled: !!user?.uid,
   });
 

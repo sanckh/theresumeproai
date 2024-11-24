@@ -103,6 +103,7 @@ export const getAllResumes = async (userId: string) => {
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({
       id: doc.id,
+      user_id: doc.data().user_id,
       name: doc.data().name || 'Untitled Resume',
       data: doc.data().data || {},
       updated_at: doc.data().updated_at || new Date().toISOString()
