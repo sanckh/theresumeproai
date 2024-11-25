@@ -19,7 +19,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Save, ChevronDown } from "lucide-react";
+import { Save, ChevronDown, Edit2 } from "lucide-react";
 
 const STORAGE_KEY = "saved_resume";
 
@@ -35,11 +35,16 @@ interface SavedResume {
       title: string;
       company: string;
       startDate: string;
-      endDate: string;
-      description: string;
+      endDate?: string;
+      description?: string;
       location?: string;
     }[];
-    education: string;
+    education: {
+      institution: string;
+      degree: string;
+      startDate: string;
+      endDate?: string;
+    }[];
     skills: string;
   };
   updated_at: string;
@@ -48,13 +53,33 @@ interface SavedResume {
 const Builder = () => {
   const { user } = useAuth();
   const resumeRef = useRef<HTMLDivElement>(null);
-  const [resumeData, setResumeData] = useState<SavedResume["data"]>({
+  const [resumeData, setResumeData] = useState<{
+    fullName: string;
+    email: string;
+    phone: string;
+    summary: string;
+    jobs: { 
+      title: string; 
+      company: string; 
+      startDate: string; 
+      endDate?: string; 
+      description?: string; 
+      location?: string; 
+    }[];
+    education: { 
+      institution: string; 
+      degree: string; 
+      startDate: string; 
+      endDate?: string; 
+    }[];
+    skills: string;
+  }>({
     fullName: "",
     email: "",
     phone: "",
     summary: "",
     jobs: [],
-    education: "",
+    education: [],
     skills: "",
   });
 
@@ -65,6 +90,7 @@ const Builder = () => {
   const [savedResumes, setSavedResumes] = useState<SavedResume[]>([]);
   const [currentResumeId, setCurrentResumeId] = useState<string | null>(null);
   const [currentResumeName, setCurrentResumeName] = useState("Untitled Resume");
+  const [isEditingName, setIsEditingName] = useState(false);
 
   // Load saved resumes list when user logs in
   useEffect(() => {
@@ -79,7 +105,11 @@ const Builder = () => {
             const mostRecent = resumes[0];
             setCurrentResumeId(mostRecent.id);
             setCurrentResumeName(mostRecent.name);
-            setResumeData(mostRecent.data);
+            setResumeData({
+              ...mostRecent.data,
+              jobs: Array.isArray(mostRecent.data.jobs) ? mostRecent.data.jobs : [],
+              education: Array.isArray(mostRecent.data.education) ? mostRecent.data.education : []
+            });
             toast.info(`Loaded "${mostRecent.name}"`);
           }
         } catch (error) {
@@ -97,7 +127,12 @@ const Builder = () => {
     if (!user?.uid) {
       const savedResume = localStorage.getItem(STORAGE_KEY);
       if (savedResume) {
-        setResumeData(JSON.parse(savedResume));
+        const parsedData = JSON.parse(savedResume);
+        setResumeData({
+          ...parsedData,
+          jobs: Array.isArray(parsedData.jobs) ? parsedData.jobs : [],
+          education: Array.isArray(parsedData.education) ? parsedData.education : []
+        });
         toast.info("Loaded your previously saved resume");
       }
     }
@@ -146,7 +181,11 @@ const Builder = () => {
 
       const resume = await loadResumeFromDatabase(user.uid, resumeId);
       if (resume) {
-        setResumeData(resume.data);
+        setResumeData({
+          ...resume.data,
+          jobs: Array.isArray(resume.data.jobs) ? resume.data.jobs : [],
+          education: Array.isArray(resume.data.education) ? resume.data.education : []
+        });
         setCurrentResumeId(resume.id);
         setCurrentResumeName(resume.name);
         toast.success(`Loaded "${resume.name}"`);
@@ -158,10 +197,12 @@ const Builder = () => {
   };
 
   const handleSaveAs = async () => {
-    const name = prompt("Enter a name for this resume:", currentResumeName);
-    if (name) {
-      setCurrentResumeName(name);
-      await handleSave(name);
+    const newName = prompt("Enter a name for this resume:", currentResumeName);
+    if (newName) {
+      setCurrentResumeName(newName);
+      // Reset current resume ID to create a new resume
+      setCurrentResumeId(null);
+      await handleSave(newName);
     }
   };
 
@@ -224,8 +265,38 @@ const Builder = () => {
           <div className="flex items-center gap-4">
             <h1 className="text-3xl font-bold">Resume Builder</h1>
             {user && (
-              <div className="text-sm text-gray-500">
-                Working on: {currentResumeName}
+              <div className="text-sm text-gray-500 flex items-center gap-2 bg-white px-3 py-1.5 rounded-md border hover:border-gray-400 transition-colors">
+                <span className="font-medium">Working on:</span>
+                {isEditingName ? (
+                  <Input
+                    className="w-48 h-8 inline-block"
+                    value={currentResumeName}
+                    onChange={(e) => setCurrentResumeName(e.target.value)}
+                    onBlur={async () => {
+                      setIsEditingName(false);
+                      if (user?.uid) {
+                        await handleSave();
+                      }
+                    }}
+                    onKeyDown={async (e) => {
+                      if (e.key === 'Enter') {
+                        setIsEditingName(false);
+                        if (user?.uid) {
+                          await handleSave();
+                        }
+                      }
+                    }}
+                    autoFocus
+                  />
+                ) : (
+                  <div 
+                    className="flex items-center gap-2 cursor-pointer group"
+                    onClick={() => setIsEditingName(true)}
+                  >
+                    <span className="font-medium text-gray-900">{currentResumeName}</span>
+                    <Edit2 className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
+                  </div>
+                )}
               </div>
             )}
           </div>

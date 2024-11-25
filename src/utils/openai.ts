@@ -37,7 +37,7 @@ export const analyzeResume = async (resumeText: string): Promise<{
           content: resumeText
         }
       ],
-      model: "gpt-4",
+      model: "gpt-4o",
       response_format: { type: "json_object" }
     });
 
@@ -62,21 +62,61 @@ export const enhanceWithAI = async (resumeData: ResumeData['data']) => {
     throw new Error('OpenAI API key not configured');
   }
 
-  const completion = await openai.chat.completions.create({
-    messages: [
-      {
-        role: "system",
-        content: "You are a professional resume writer. Enhance the provided resume content to be more professional and ATS-friendly. Keep the same structure but improve the language and formatting. Return the enhanced content in JSON format matching the input structure."
-      },
-      {
-        role: "user",
-        content: JSON.stringify(resumeData)
-      }
-    ],
-    model: "gpt-4o-mini",
-    response_format: { type: "json_object" }
-  });
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content: `You are a professional resume writer. Enhance the provided resume content to be:
+          1. Grammatically polished.
+          2. Optimized with industry-specific keywords.
+          3. Clear, concise, and professional.
+          4. Formatted for ATS (Applicant Tracking System) compatibility.
 
-  const enhancedContent = JSON.parse(completion.choices[0].message.content || "{}");
-  return enhancedContent;
+          Return the enhanced resume in the same JSON structure as the input, with these fields:
+          {
+            "fullName": "string",
+            "email": "string",
+            "phone": "string",
+            "summary": "string",
+            "jobs": [{"title": "string", "company": "string", "startDate": "string", "endDate": "string", "description": "string"}],
+            "education": [{"institution": "string", "degree": "string", "startDate": "string", "endDate": "string"}],
+            "skills": "string"
+          }`
+        },
+        {
+          role: "user",
+          content: JSON.stringify(resumeData)
+        }
+      ]
+    });
+
+    const enhancedContent = completion.choices?.[0]?.message?.content;
+    if (!enhancedContent) {
+      throw new Error('No response content received from OpenAI');
+    }
+
+    const parsedContent = JSON.parse(enhancedContent);
+
+    parsedContent.skills = formatSkills(parsedContent.skills);
+
+    return parsedContent;
+  } catch (error) {
+    console.error('Error enhancing resume:', error);
+    throw error;
+  }
+};
+
+const formatSkills = (skills: string | string[]): string => {
+  if (Array.isArray(skills)) {
+    return skills.map(skill => skill.trim()).join(', ');
+  }
+
+  return skills
+    .split(/(?<!\w),(?!\w)|\n+/) 
+    .map(skill => skill.trim())
+    .filter(skill => skill.length > 0)
+    .join(', ');
 };

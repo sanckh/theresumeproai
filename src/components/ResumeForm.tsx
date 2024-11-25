@@ -5,26 +5,20 @@ import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import { Card } from "./ui/card";
 import { JobExperience } from "./JobExperience";
-import { Plus, Wand2 } from "lucide-react";
+import { EducationExperience } from "./EducationExperience";
+import { Plus, Wand2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { enhanceWithAI } from "@/utils/openai";
-
-interface Job {
-  title: string;
-  company: string;
-  startDate: string;
-  endDate: string;
-  description: string;
-  location?: string;
-}
+import { JobEntry, EducationEntry } from "@/utils/database";
+import { formatPhoneNumber } from "@/utils/formatters";
 
 export const ResumeForm = ({ onUpdate }: { onUpdate: (data: {
   fullName: string;
   email: string;
   phone: string;
   summary: string;
-  jobs: Job[];
-  education: string;
+  jobs: { title: string; company: string; startDate: string; endDate?: string; description?: string }[];
+  education: { institution: string; degree: string; startDate: string; endDate?: string }[];
   skills: string;
 }) => void }) => {
   const [formData, setFormData] = useState({
@@ -32,20 +26,56 @@ export const ResumeForm = ({ onUpdate }: { onUpdate: (data: {
     email: "",
     phone: "",
     summary: "",
-    jobs: [] as Job[],
-    education: "",
+    jobs: [] as { title: string; company: string; startDate: string; endDate?: string; description?: string }[],
+    education: [] as { institution: string; degree: string; startDate: string; endDate?: string }[],
     skills: "",
   });
   const [isEnhancing, setIsEnhancing] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    const newData = { ...formData, [name]: value };
+    let newValue = value;
+    
+    // Format phone number if that's the field being changed
+    if (name === 'phone') {
+      newValue = formatPhoneNumber(value);
+    }
+    
+    const newData = { ...formData, [name]: newValue };
     setFormData(newData);
     onUpdate(newData);
   };
 
-  const handleJobChange = (index: number, field: string, value: string) => {
+  const handleEducationChange = (index: number, field: keyof { institution: string; degree: string; startDate: string; endDate?: string }, value: string) => {
+    const newEducation = [...formData.education];
+    newEducation[index] = { ...newEducation[index], [field]: value };
+    const newData = { ...formData, education: newEducation };
+    setFormData(newData);
+    onUpdate(newData);
+  };
+
+  const addEducation = () => {
+    const newEducation: { institution: string; degree: string; startDate: string; endDate?: string } = {
+      institution: "",
+      degree: "",
+      startDate: "",
+    };
+    const newData = {
+      ...formData,
+      education: [...formData.education, newEducation],
+    };
+    setFormData(newData);
+    onUpdate(newData);
+  };
+
+  const removeEducation = (index: number) => {
+    const newEducation = formData.education.filter((_, i) => i !== index);
+    const newData = { ...formData, education: newEducation };
+    setFormData(newData);
+    onUpdate(newData);
+  };
+
+  const handleJobChange = (index: number, field: keyof { title: string; company: string; startDate: string; endDate?: string; description?: string }, value: string) => {
     const newJobs = [...formData.jobs];
     newJobs[index] = { ...newJobs[index], [field]: value };
     const newData = { ...formData, jobs: newJobs };
@@ -54,12 +84,10 @@ export const ResumeForm = ({ onUpdate }: { onUpdate: (data: {
   };
 
   const addJob = () => {
-    const newJob: Job = {
+    const newJob: { title: string; company: string; startDate: string; endDate?: string; description?: string } = {
       title: "",
       company: "",
       startDate: "",
-      endDate: "",
-      description: "",
     };
     const newData = {
       ...formData,
@@ -162,11 +190,11 @@ export const ResumeForm = ({ onUpdate }: { onUpdate: (data: {
               onClick={addJob}
               className="flex items-center gap-2"
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="w-4 h-4" />
               Add Job
             </Button>
           </div>
-          <div className="space-y-4">
+          <div className="space-y-6">
             {formData.jobs.map((job, index) => (
               <JobExperience
                 key={index}
@@ -179,17 +207,33 @@ export const ResumeForm = ({ onUpdate }: { onUpdate: (data: {
           </div>
         </div>
 
-        <div>
-          <Label htmlFor="education">Education</Label>
-          <Textarea
-            id="education"
-            name="education"
-            value={formData.education}
-            onChange={handleChange}
-            placeholder="List your educational background - our AI will format it professionally"
-            className="h-32"
-          />
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <Label>Education</Label>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addEducation}
+              className="flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Add Education
+            </Button>
+          </div>
+          <div className="space-y-6">
+            {formData.education.map((edu, index) => (
+              <EducationExperience
+                key={index}
+                index={index}
+                education={edu}
+                onChange={handleEducationChange}
+                onRemove={removeEducation}
+              />
+            ))}
+          </div>
         </div>
+
         <div>
           <Label htmlFor="skills">Skills</Label>
           <Textarea

@@ -20,6 +20,13 @@ export interface JobEntry {
   location?: string;
 }
 
+export interface EducationEntry {
+  institution: string;
+  degree: string;
+  startDate: string;
+  endDate?: string;
+}
+
 export interface ResumeData {
   id?: string;
   user_id: string;
@@ -30,7 +37,7 @@ export interface ResumeData {
     phone: string;
     summary: string;
     jobs: JobEntry[];
-    education: string;
+    education: EducationEntry[];
     skills: string;
   };
   created_at?: string;
@@ -63,8 +70,8 @@ export const saveResumeToDatabase = async (
       user_id: userId,
       name,
       data: resumeData,
-      created_at: resumeId ? undefined : new Date().toISOString(), // Only set on creation
       updated_at: new Date().toISOString(),
+      ...(resumeId ? {} : { created_at: new Date().toISOString() })
     };
 
     await setDoc(resumeRef, resumeDoc, { merge: true });
