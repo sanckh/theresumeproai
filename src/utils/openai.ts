@@ -13,7 +13,77 @@ try {
   console.warn('OpenAI client initialization failed. Some features may be limited.');
 }
 
-export const analyzeResume = async (resumeText: string | object): Promise<{
+export interface ParsedResume {
+  sections: { [key: string]: string };
+  metadata: {
+    totalSections: number;
+    sectionsList: string[];
+  };
+}
+
+interface ExperienceDetails {
+  Position: string;
+  Company: string;
+  Location: string;
+  Description?: string;
+}
+
+export async function parseResumeWithOpenAI(resumeText: string): Promise<ParsedResume> {
+  try {
+    const systemPrompt = `You are a helpful assistant that parses resumes into structured sections. Given a resume text, you will return a JSON object containing the sections and their content.
+
+Instructions:
+- Analyze the provided resume text.
+- Identify the main sections (e.g., Personal Information, Professional Summary, Skills, Experience, Education, Miscellaneous).
+- Return a JSON object with each section as a key and the corresponding content as the value.
+- Ensure proper formatting and organization of content within each section.
+- Preserve line breaks and spacing where appropriate.
+- Handle both traditional and modern resume formats.
+
+The response should be in the following format:
+{
+  "sections": {
+    "Section Name": "Section Content",
+    ...
+  },
+  "metadata": {
+    "totalSections": number,
+    "sectionsList": [ "Section Name", ... ]
+  }
+}
+
+Do not include any additional explanations or notes.`;
+
+    const userMessage = `Resume Text:
+\`\`\`
+${resumeText}
+\`\`\``;
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userMessage },
+      ],
+      temperature: 0,
+    });
+
+    const assistantMessage = response.choices[0].message?.content;
+
+    if (!assistantMessage) {
+      throw new Error('No response from OpenAI');
+    }
+
+    // Parse the assistant's response
+    const parsedResume: ParsedResume = JSON.parse(assistantMessage);
+    return parsedResume;
+  } catch (error) {
+    console.error('Error parsing resume with OpenAI:', error);
+    throw error;
+  }
+}
+
+export const analyzeResume = async (resumeData: string | ParsedResume): Promise<{
   score: number;
   suggestions: string[];
   strengths: string[];
@@ -27,150 +97,140 @@ export const analyzeResume = async (resumeText: string | object): Promise<{
   }
 
   try {
-    let parsedResume;
-    if (typeof resumeText === 'string') {
+    let parsedResume: ParsedResume;
+    if (typeof resumeData === 'string') {
       try {
-        parsedResume = JSON.parse(resumeText);
+        parsedResume = JSON.parse(resumeData);
       } catch {
-        // If parsing fails, treat the entire text as content
         parsedResume = {
-          content: resumeText,
+          sections: {
+            'Content': resumeData
+          },
           metadata: {
-            sections: 1,
-            averageFontSize: 12,
-            distinctFontSizes: 1
+            totalSections: 1,
+            sectionsList: ['Content']
           }
         };
       }
     } else {
-      parsedResume = resumeText;
+      parsedResume = resumeData;
     }
 
-    const { content, metadata } = parsedResume;
+    const systemPrompt = `You are a professional resume reviewer. You will analyze the provided resume sections and provide specific, non-repetitive feedback.
 
-    const systemPrompt = `You are a professional resume reviewer with expertise in modern resume writing and ATS (Applicant Tracking Systems). 
-    
-You will analyze the resume provided, considering both its content and structure. The resume data includes both the content and metadata about its structure.
-
-Important guidelines:
-1. Before suggesting any sections are missing, carefully check if the content exists in ANY format
-2. Consider that modern resumes often use creative formats - a summary might be bullet points at the top
-3. Focus on the QUALITY of content rather than format:
-   - For achievements, check if they include specific metrics and results
-   - For technical skills, check if they are organized logically
-   - For experience, check if impact is clearly demonstrated
-4. When analyzing bullet points:
-   - Check if they follow the "accomplished X as measured by Y by doing Z" format
-   - Look for specific metrics, percentages, or numbers
-   - Verify they show impact rather than just listing duties
-5. Pay special attention to:
-   - Quantifiable achievements (numbers, percentages, metrics)
-   - Action verbs at the start of bullet points
-   - Technical skills relevance and organization
-   - Career progression and role responsibilities
+Important Context:
+- You will receive resume data already parsed into sections
+- Each section's content may be structured (e.g., Experience entries with Position, Company, Responsibilities)
+- DO NOT suggest adding sections that already exist
+- DO NOT suggest formatting changes for sections that show good structure
 
 Analyze and provide:
-1. A score out of 100 based on:
-   - Quality of achievements (40%)
-   - Skills presentation (20%)
-   - Overall structure (20%)
-   - Impact demonstration (20%)
-2. Specific, actionable suggestions focused on:
-   - Strengthening existing achievements with metrics
-   - Improving impact demonstration
-   - Enhancing skill organization
-   - Career progression clarity
-3. Current strengths in:
-   - Achievement presentation
-   - Technical depth
-   - Role progression
-   - Overall impact
+1. A score from 0-100 based on:
+   - Quality and impact of achievements (40%)
+   - Skills relevance and depth (20%)
+   - Experience progression (20%)
+   - Overall presentation (20%)
 
-Format your response as JSON with score, suggestions (array), and strengths (array) fields.`;
-    
-    // Count tokens before API call
-    const systemTokens = encode(systemPrompt).length;
-    const resumeTokens = encode(JSON.stringify(parsedResume)).length;
-    
-    console.log('\n=== Resume Analysis Debug Info ===');
-    console.log('\nParsed Resume Structure:');
-    console.log(JSON.stringify(parsedResume, null, 2));
-    
-    console.log('\nToken usage breakdown:');
-    console.log('- System prompt tokens:', systemTokens);
-    console.log('- Resume text tokens:', resumeTokens);
-    console.log('- Total tokens:', systemTokens + resumeTokens);
-    console.log('- Document structure:', metadata);
-    console.log('\n===============================\n');
+2. Specific suggestions for improvement:
+   - Focus on content quality, not formatting that's already good
+   - Suggest quantifying achievements if numbers are missing
+   - Recommend adding missing important sections only if truly absent
+   - Suggest improvements to weak or vague content
 
-    const completion = await openai.chat.completions.create({
+3. Current strengths:
+   - Highlight strong achievements and metrics
+   - Note effective progression in roles
+   - Recognize good use of action verbs
+   - Acknowledge comprehensive technical skills
+
+Format your response in plain text with clear headers:
+Score: [number]
+
+Strengths:
+- [strength 1]
+- [strength 2]
+...
+
+Suggestions:
+- [suggestion 1]
+- [suggestion 2]
+...`;
+
+    const formatSection = (name: string, content: string | Record<string, ExperienceDetails>): string => {
+      if (typeof content === 'string') return content;
+      if (name.toLowerCase() === 'experience') {
+        return Object.entries(content)
+          .map(([period, details]: [string, ExperienceDetails]) => {
+            return `${period}
+Position: ${details.Position}
+Company: ${details.Company}
+Location: ${details.Location}
+${details.Description ? `Description: ${details.Description}` : ''}`;
+          })
+          .join('\n\n');
+      }
+      return '';
+    };
+
+    const userMessage = `Resume Content:
+${Object.entries(parsedResume.sections)
+        .map(([name, content]) => `=== ${name} ===\n${formatSection(name, content)}`)
+        .join('\n\n')}`;
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
       messages: [
-        {
-          role: "system",
-          content: systemPrompt
-        },
-        {
-          role: "user",
-          content: JSON.stringify(parsedResume)
-        }
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userMessage }
       ],
-      model: "gpt-4o-mini",
-      response_format: { type: "json_object" },
-      temperature: 0.7
+      temperature: 0.7,
+      max_tokens: 1000,
     });
 
-    // Log completion tokens from API response
-    console.log('- Completion tokens:', completion.usage?.completion_tokens);
-    console.log('- Total tokens used:', completion.usage?.total_tokens);
-    
-    const responseContent = completion.choices[0].message.content;
-    console.log('Raw API response:', responseContent);
-
-    if (!responseContent) {
-      console.error('Empty response from API');
-      return {
-        score: 0,
-        suggestions: ['Error: Received empty response from AI. Please try again.'],
-        strengths: []
-      };
+    const result = response.choices[0].message?.content;
+    if (!result) {
+      throw new Error('No response from OpenAI');
     }
 
-    try {
-      const response = JSON.parse(responseContent);
-      
-      // Validate response structure
-      if (typeof response.score !== 'number' || 
-          !Array.isArray(response.suggestions) || 
-          !Array.isArray(response.strengths)) {
-        console.error('Invalid response structure:', response);
-        return {
-          score: 0,
-          suggestions: ['Error: Invalid response format. Please try again.'],
-          strengths: []
-        };
+    // Parse the response more carefully to avoid duplicates
+    const lines = result.split('\n').map(line => line.trim()).filter(Boolean);
+
+    // Find score
+    const scoreMatch = result.match(/Score:\s*(\d+)/i);
+    const score = scoreMatch ? parseInt(scoreMatch[1]) : 0;
+
+    // Find unique strengths and suggestions
+    const strengths = new Set<string>();
+    const suggestions = new Set<string>();
+
+    let currentSection = '';
+    for (const line of lines) {
+      if (line.toLowerCase().includes('strength')) {
+        currentSection = 'strengths';
+        continue;
+      } else if (line.toLowerCase().includes('suggestion')) {
+        currentSection = 'suggestions';
+        continue;
       }
 
-      return {
-        score: response.score,
-        suggestions: response.suggestions,
-        strengths: response.strengths
-      };
-    } catch (error) {
-      console.error('Error parsing API response:', error);
-      console.error('Response content:', responseContent);
-      return {
-        score: 0,
-        suggestions: ['Error parsing AI response. Please try again.'],
-        strengths: []
-      };
+      if (line.startsWith('-') || line.match(/^\d+\./)) {
+        const item = line.replace(/^[-\d.]\s*/, '').trim();
+        if (item && currentSection === 'strengths') {
+          strengths.add(item);
+        } else if (item && currentSection === 'suggestions') {
+          suggestions.add(item);
+        }
+      }
     }
+
+    return {
+      score: Math.min(100, Math.max(0, score)),
+      suggestions: Array.from(suggestions),
+      strengths: Array.from(strengths)
+    };
   } catch (error) {
     console.error('Error analyzing resume:', error);
-    return {
-      score: 0,
-      suggestions: ['Error analyzing resume. Please try again later.'],
-      strengths: []
-    };
+    throw error;
   }
 };
 
@@ -339,7 +399,7 @@ const formatSkills = (skills: string | string[]): string => {
   }
 
   return skills
-    .split(/(?<!\w),(?!\w)|\n+/) 
+    .split(/(?<!\w),(?!\w)|\n+/)
     .map(skill => skill.trim())
     .filter(skill => skill.length > 0)
     .join(', ');

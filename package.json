@@ -56,7 +56,7 @@
     "lucide-react": "^0.451.0",
     "mammoth": "^1.8.0",
     "next-themes": "^0.3.0",
-    "openai": "^4.73.0",
+    "openai": "^4.73.1",
     "pdf-parse": "^1.1.1",
     "pdfjs-dist": "^4.8.69",
     "react": "^18.3.1",

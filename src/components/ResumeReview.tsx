@@ -6,7 +6,7 @@ import { Alert, AlertDescription } from "./ui/alert";
 import { Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
-import { analyzeResume } from "@/utils/openai";
+import { analyzeResume, ParsedResume } from "@/utils/openai";
 import { parseDocument } from "@/utils/documentParser";
 
 interface ResumeAnalysis {
@@ -24,14 +24,14 @@ const SUPPORTED_FILE_TYPES = {
 
 export const ResumeReview = () => {
   const [file, setFile] = useState<File | null>(null);
-  const [resumeText, setResumeText] = useState<string>("");
+  const [parsedResume, setParsedResume] = useState<ParsedResume | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
   const { data: analysis, isLoading, refetch } = useQuery<ResumeAnalysis>({
     queryKey: ["resumeAnalysis", file?.name],
     queryFn: async () => {
-      if (!resumeText) throw new Error("No resume text available");
-      return analyzeResume(resumeText);
+      if (!parsedResume) throw new Error("No resume data available");
+      return analyzeResume(parsedResume);
     },
     enabled: false,
   });
@@ -43,14 +43,26 @@ export const ResumeReview = () => {
         try {
           setIsUploading(true);
           setFile(selectedFile);
-          const parsedDoc = await parseDocument(selectedFile);
-          setResumeText(parsedDoc);
+          const parsed = await parseDocument(selectedFile);
+          setParsedResume(parsed);
+
+          // Log the sections found by OpenAI
+          console.log('\n=== Resume Sections Found ===');
+          console.log('Total Sections:', parsed.metadata.totalSections);
+          console.log('\nSections List:');
+          parsed.metadata.sectionsList.forEach((section, index) => {
+            console.log(`${index + 1}. ${section}`);
+            console.log('Content:', parsed.sections[section]);
+            console.log('-'.repeat(50));
+          });
+          console.log('='.repeat(50));
+
           toast.success(`${selectedFile.name} uploaded successfully!`);
         } catch (error) {
           console.error('Error parsing document:', error);
           toast.error('Error parsing document. Please try again.');
           setFile(null);
-          setResumeText("");
+          setParsedResume(null);
         } finally {
           setIsUploading(false);
         }
