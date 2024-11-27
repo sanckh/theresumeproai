@@ -1,16 +1,18 @@
-import OpenAI from 'openai';
-import { ResumeData, JobEntry } from './database';
-import { encode } from 'gpt-tokenizer';
+import OpenAI from "openai";
+import { ResumeData, JobEntry } from "./database";
+import { encode } from "gpt-tokenizer";
 
 let openai: OpenAI | null = null;
 
 try {
   openai = new OpenAI({
-    apiKey: import.meta.env.VITE_OPENAI_API_KEY || 'dummy-key',
-    dangerouslyAllowBrowser: true
+    apiKey: import.meta.env.VITE_OPENAI_API_KEY || "dummy-key",
+    dangerouslyAllowBrowser: true,
   });
 } catch (error) {
-  console.warn('OpenAI client initialization failed. Some features may be limited.');
+  console.warn(
+    "OpenAI client initialization failed. Some features may be limited."
+  );
 }
 
 export interface ParsedResume {
@@ -28,7 +30,9 @@ interface ExperienceDetails {
   Description?: string;
 }
 
-export async function parseResumeWithOpenAI(resumeText: string): Promise<ParsedResume> {
+export async function parseResumeWithOpenAI(
+  resumeText: string
+): Promise<ParsedResume> {
   try {
     const systemPrompt = `You are a helpful assistant that parses resumes into structured sections. Given a resume text, you will return a JSON object containing the sections and their content.
 
@@ -60,10 +64,10 @@ ${resumeText}
 \`\`\``;
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
+      model: "gpt-3.5-turbo",
       messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userMessage },
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userMessage },
       ],
       temperature: 0,
     });
@@ -71,45 +75,51 @@ ${resumeText}
     const assistantMessage = response.choices[0].message?.content;
 
     if (!assistantMessage) {
-      throw new Error('No response from OpenAI');
+      throw new Error("No response from OpenAI");
     }
 
     // Parse the assistant's response
     const parsedResume: ParsedResume = JSON.parse(assistantMessage);
     return parsedResume;
   } catch (error) {
-    console.error('Error parsing resume with OpenAI:', error);
+    console.error("Error parsing resume with OpenAI:", error);
     throw error;
   }
 }
 
-export const analyzeResume = async (resumeData: string | ParsedResume): Promise<{
+export const analyzeResume = async (
+  resumeData: string | ParsedResume
+): Promise<{
   score: number;
   suggestions: string[];
   strengths: string[];
 }> => {
-  if (!openai || !import.meta.env.VITE_OPENAI_API_KEY || import.meta.env.VITE_OPENAI_API_KEY === 'dummy-key') {
+  if (
+    !openai ||
+    !import.meta.env.VITE_OPENAI_API_KEY ||
+    import.meta.env.VITE_OPENAI_API_KEY === "dummy-key"
+  ) {
     return {
       score: 0,
-      suggestions: ['Please configure your OpenAI API key in the .env file'],
-      strengths: []
+      suggestions: ["Please configure your OpenAI API key in the .env file"],
+      strengths: [],
     };
   }
 
   try {
     let parsedResume: ParsedResume;
-    if (typeof resumeData === 'string') {
+    if (typeof resumeData === "string") {
       try {
         parsedResume = JSON.parse(resumeData);
       } catch {
         parsedResume = {
           sections: {
-            'Content': resumeData
+            Content: resumeData,
           },
           metadata: {
             totalSections: 1,
-            sectionsList: ['Content']
-          }
+            sectionsList: ["Content"],
+          },
         };
       }
     } else {
@@ -156,32 +166,35 @@ Suggestions:
 - [suggestion 2]
 ...`;
 
-    const formatSection = (name: string, content: string | Record<string, ExperienceDetails>): string => {
-      if (typeof content === 'string') return content;
-      if (name.toLowerCase() === 'experience') {
+    const formatSection = (
+      name: string,
+      content: string | Record<string, ExperienceDetails>
+    ): string => {
+      if (typeof content === "string") return content;
+      if (name.toLowerCase() === "experience") {
         return Object.entries(content)
           .map(([period, details]: [string, ExperienceDetails]) => {
             return `${period}
 Position: ${details.Position}
 Company: ${details.Company}
 Location: ${details.Location}
-${details.Description ? `Description: ${details.Description}` : ''}`;
+${details.Description ? `Description: ${details.Description}` : ""}`;
           })
-          .join('\n\n');
+          .join("\n\n");
       }
-      return '';
+      return "";
     };
 
     const userMessage = `Resume Content:
 ${Object.entries(parsedResume.sections)
-        .map(([name, content]) => `=== ${name} ===\n${formatSection(name, content)}`)
-        .join('\n\n')}`;
+  .map(([name, content]) => `=== ${name} ===\n${formatSection(name, content)}`)
+  .join("\n\n")}`;
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
+      model: "gpt-3.5-turbo",
       messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userMessage }
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userMessage },
       ],
       temperature: 0.7,
       max_tokens: 1000,
@@ -189,11 +202,14 @@ ${Object.entries(parsedResume.sections)
 
     const result = response.choices[0].message?.content;
     if (!result) {
-      throw new Error('No response from OpenAI');
+      throw new Error("No response from OpenAI");
     }
 
     // Parse the response more carefully to avoid duplicates
-    const lines = result.split('\n').map(line => line.trim()).filter(Boolean);
+    const lines = result
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
 
     // Find score
     const scoreMatch = result.match(/Score:\s*(\d+)/i);
@@ -203,21 +219,21 @@ ${Object.entries(parsedResume.sections)
     const strengths = new Set<string>();
     const suggestions = new Set<string>();
 
-    let currentSection = '';
+    let currentSection = "";
     for (const line of lines) {
-      if (line.toLowerCase().includes('strength')) {
-        currentSection = 'strengths';
+      if (line.toLowerCase().includes("strength")) {
+        currentSection = "strengths";
         continue;
-      } else if (line.toLowerCase().includes('suggestion')) {
-        currentSection = 'suggestions';
+      } else if (line.toLowerCase().includes("suggestion")) {
+        currentSection = "suggestions";
         continue;
       }
 
-      if (line.startsWith('-') || line.match(/^\d+\./)) {
-        const item = line.replace(/^[-\d.]\s*/, '').trim();
-        if (item && currentSection === 'strengths') {
+      if (line.startsWith("-") || line.match(/^\d+\./)) {
+        const item = line.replace(/^[-\d.]\s*/, "").trim();
+        if (item && currentSection === "strengths") {
           strengths.add(item);
-        } else if (item && currentSection === 'suggestions') {
+        } else if (item && currentSection === "suggestions") {
           suggestions.add(item);
         }
       }
@@ -226,17 +242,21 @@ ${Object.entries(parsedResume.sections)
     return {
       score: Math.min(100, Math.max(0, score)),
       suggestions: Array.from(suggestions),
-      strengths: Array.from(strengths)
+      strengths: Array.from(strengths),
     };
   } catch (error) {
-    console.error('Error analyzing resume:', error);
+    console.error("Error analyzing resume:", error);
     throw error;
   }
 };
 
-export const enhanceWithAI = async (resumeData: ResumeData['data']) => {
-  if (!openai || !import.meta.env.VITE_OPENAI_API_KEY || import.meta.env.VITE_OPENAI_API_KEY === 'dummy-key') {
-    throw new Error('OpenAI API key not configured');
+export const enhanceWithAI = async (resumeData: ResumeData["data"]) => {
+  if (
+    !openai ||
+    !import.meta.env.VITE_OPENAI_API_KEY ||
+    import.meta.env.VITE_OPENAI_API_KEY === "dummy-key"
+  ) {
+    throw new Error("OpenAI API key not configured");
   }
 
   try {
@@ -282,18 +302,18 @@ export const enhanceWithAI = async (resumeData: ResumeData['data']) => {
           2. Enhance each duty to be action-oriented and impactful
           3. Start each duty with a strong action verb
           4. Include specific metrics and achievements where possible
-          5. Keep duties concise and focused`
+          5. Keep duties concise and focused`,
         },
         {
           role: "user",
-          content: JSON.stringify(resumeData)
-        }
-      ]
+          content: JSON.stringify(resumeData),
+        },
+      ],
     });
 
     const enhancedContent = completion.choices?.[0]?.message?.content;
     if (!enhancedContent) {
-      throw new Error('No response content received from OpenAI');
+      throw new Error("No response content received from OpenAI");
     }
 
     const parsedContent = JSON.parse(enhancedContent);
@@ -301,35 +321,42 @@ export const enhanceWithAI = async (resumeData: ResumeData['data']) => {
     // Ensure each job has a duties array
     parsedContent.jobs = parsedContent.jobs.map((job: JobEntry) => ({
       ...job,
-      duties: job.duties || []
+      duties: job.duties || [],
     }));
 
     parsedContent.skills = formatSkills(parsedContent.skills);
 
     return parsedContent;
   } catch (error) {
-    console.error('Error enhancing resume:', error);
+    console.error("Error enhancing resume:", error);
     throw error;
   }
 };
 
-export const classifyResumeSection = async (text: string, context: string): Promise<{
+export const classifyResumeSection = async (
+  text: string,
+  context: string
+): Promise<{
   sectionType: string;
   confidence: number;
 }> => {
-  if (!openai || !import.meta.env.VITE_OPENAI_API_KEY || import.meta.env.VITE_OPENAI_API_KEY === 'dummy-key') {
+  if (
+    !openai ||
+    !import.meta.env.VITE_OPENAI_API_KEY ||
+    import.meta.env.VITE_OPENAI_API_KEY === "dummy-key"
+  ) {
     return {
-      sectionType: 'unknown',
-      confidence: 0
+      sectionType: "unknown",
+      confidence: 0,
     };
   }
 
   try {
     const response = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
+      model: "gpt-3.5-turbo",
       messages: [
         {
-          role: 'system',
+          role: "system",
           content: `You are an expert resume parser that classifies resume sections. Given a section of text and its context:
 
 Strict Classification Rules:
@@ -365,42 +392,43 @@ Classification Priority:
 
 Respond with ONLY two comma-separated values:
 1. category name in lowercase (header, summary, skills, experience, education, or miscellaneous)
-2. confidence score (0.9 for exact match, 0.7 for likely match, 0.5 for uncertain)`
+2. confidence score (0.9 for exact match, 0.7 for likely match, 0.5 for uncertain)`,
         },
         {
-          role: 'user',
-          content: `Previous sections: "${context}"\n\nCurrent text to classify:\n"${text}"`
-        }
+          role: "user",
+          content: `Previous sections: "${context}"\n\nCurrent text to classify:\n"${text}"`,
+        },
       ],
       temperature: 0.1,
-      max_tokens: 10
+      max_tokens: 10,
     });
 
-    const result = response.choices[0].message.content?.toLowerCase() || 'unknown';
-    const [category, confidenceStr] = result.split(',');
+    const result =
+      response.choices[0].message.content?.toLowerCase() || "unknown";
+    const [category, confidenceStr] = result.split(",");
     const confidence = confidenceStr ? parseFloat(confidenceStr) : 0.5;
 
     return {
       sectionType: category.trim(),
-      confidence: confidence
+      confidence: confidence,
     };
   } catch (error) {
-    console.error('Error classifying resume section:', error);
+    console.error("Error classifying resume section:", error);
     return {
-      sectionType: 'unknown',
-      confidence: 0
+      sectionType: "unknown",
+      confidence: 0,
     };
   }
 };
 
 const formatSkills = (skills: string | string[]): string => {
   if (Array.isArray(skills)) {
-    return skills.map(skill => skill.trim()).join(', ');
+    return skills.map((skill) => skill.trim()).join(", ");
   }
 
   return skills
     .split(/(?<!\w),(?!\w)|\n+/)
-    .map(skill => skill.trim())
-    .filter(skill => skill.length > 0)
-    .join(', ');
+    .map((skill) => skill.trim())
+    .filter((skill) => skill.length > 0)
+    .join(", ");
 };

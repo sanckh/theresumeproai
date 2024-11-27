@@ -18,8 +18,9 @@ interface ResumeAnalysis {
 const SUPPORTED_FILE_TYPES = {
   "application/pdf": "PDF",
   "application/msword": "DOC",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "DOCX",
-  "text/plain": "TXT"
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+    "DOCX",
+  "text/plain": "TXT",
 } as const;
 
 export const ResumeReview = () => {
@@ -27,7 +28,11 @@ export const ResumeReview = () => {
   const [parsedResume, setParsedResume] = useState<ParsedResume | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
-  const { data: analysis, isLoading, refetch } = useQuery<ResumeAnalysis>({
+  const {
+    data: analysis,
+    isLoading,
+    refetch,
+  } = useQuery<ResumeAnalysis>({
     queryKey: ["resumeAnalysis", file?.name],
     queryFn: async () => {
       if (!parsedResume) throw new Error("No resume data available");
@@ -47,28 +52,32 @@ export const ResumeReview = () => {
           setParsedResume(parsed);
 
           // Log the sections found by OpenAI
-          console.log('\n=== Resume Sections Found ===');
-          console.log('Total Sections:', parsed.metadata.totalSections);
-          console.log('\nSections List:');
+          console.log("\n=== Resume Sections Found ===");
+          console.log("Total Sections:", parsed.metadata.totalSections);
+          console.log("\nSections List:");
           parsed.metadata.sectionsList.forEach((section, index) => {
             console.log(`${index + 1}. ${section}`);
-            console.log('Content:', parsed.sections[section]);
-            console.log('-'.repeat(50));
+            console.log("Content:", parsed.sections[section]);
+            console.log("-".repeat(50));
           });
-          console.log('='.repeat(50));
+          console.log("=".repeat(50));
 
           toast.success(`${selectedFile.name} uploaded successfully!`);
         } catch (error) {
-          console.error('Error parsing document:', error);
-          toast.error('Error parsing document. Please try again.');
+          console.error("Error parsing document:", error);
+          toast.error("Error parsing document. Please try again.");
           setFile(null);
           setParsedResume(null);
         } finally {
           setIsUploading(false);
         }
       } else {
-        toast.error(`Unsupported file type. Please upload a ${Object.values(SUPPORTED_FILE_TYPES).join(", ")} file.`);
-        e.target.value = '';
+        toast.error(
+          `Unsupported file type. Please upload a ${Object.values(
+            SUPPORTED_FILE_TYPES
+          ).join(", ")} file.`
+        );
+        e.target.value = "";
       }
     }
   };
@@ -88,7 +97,8 @@ export const ResumeReview = () => {
           <div className="flex flex-col gap-2">
             <h2 className="text-lg font-semibold">Upload Your Resume</h2>
             <p className="text-sm text-gray-500">
-              Supported formats: {Object.values(SUPPORTED_FILE_TYPES).join(", ")}
+              Supported formats:{" "}
+              {Object.values(SUPPORTED_FILE_TYPES).join(", ")}
             </p>
             <div className="flex gap-4">
               <Input
@@ -129,7 +139,11 @@ export const ResumeReview = () => {
             <Alert>
               <Upload className="mr-2 h-4 w-4" />
               <AlertDescription>
-                {`${file.name} (${SUPPORTED_FILE_TYPES[file.type as keyof typeof SUPPORTED_FILE_TYPES]}) ready for analysis`}
+                {`${file.name} (${
+                  SUPPORTED_FILE_TYPES[
+                    file.type as keyof typeof SUPPORTED_FILE_TYPES
+                  ]
+                }) ready for analysis`}
               </AlertDescription>
             </Alert>
           )}
