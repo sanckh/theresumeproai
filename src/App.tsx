@@ -11,6 +11,7 @@ import Pricing from "./pages/Pricing";
 import Auth from "./pages/Auth";
 import Templates from "./pages/Templates";
 import History from "./pages/History";
+import Success from "./pages/Success";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +30,7 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/templates" element={<Templates />} />
               <Route path="/history" element={<History />} />
+              <Route path="/success" element={<Success />} />
             </Routes>
           </BrowserRouter>
         </TooltipProvider>
