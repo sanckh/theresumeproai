@@ -7,6 +7,7 @@ import { Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { analyzeResume } from "@/utils/openai";
+import { parseDocument } from "@/utils/documentParser";
 
 interface ResumeAnalysis {
   score: number;
@@ -14,17 +15,17 @@ interface ResumeAnalysis {
   strengths: string[];
 }
 
-const ALLOWED_FILE_TYPES = {
+const SUPPORTED_FILE_TYPES = {
   "application/pdf": "PDF",
   "application/msword": "DOC",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "DOCX",
-  "application/rtf": "RTF",
   "text/plain": "TXT"
-};
+} as const;
 
 export const ResumeReview = () => {
   const [file, setFile] = useState<File | null>(null);
   const [resumeText, setResumeText] = useState<string>("");
+  const [isUploading, setIsUploading] = useState(false);
 
   const { data: analysis, isLoading, refetch } = useQuery<ResumeAnalysis>({
     queryKey: ["resumeAnalysis", file?.name],
@@ -38,13 +39,24 @@ export const ResumeReview = () => {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
-      if (selectedFile.type in ALLOWED_FILE_TYPES) {
-        setFile(selectedFile);
-        const text = await selectedFile.text();
-        setResumeText(text);
-        toast.success(`${selectedFile.name} uploaded successfully!`);
+      if (selectedFile.type in SUPPORTED_FILE_TYPES) {
+        try {
+          setIsUploading(true);
+          setFile(selectedFile);
+          const parsedDoc = await parseDocument(selectedFile);
+          setResumeText(parsedDoc);
+          toast.success(`${selectedFile.name} uploaded successfully!`);
+        } catch (error) {
+          console.error('Error parsing document:', error);
+          toast.error('Error parsing document. Please try again.');
+          setFile(null);
+          setResumeText("");
+        } finally {
+          setIsUploading(false);
+        }
       } else {
-        toast.error(`Please upload a valid document (${Object.values(ALLOWED_FILE_TYPES).join(", ")})`);
+        toast.error(`Unsupported file type. Please upload a ${Object.values(SUPPORTED_FILE_TYPES).join(", ")} file.`);
+        e.target.value = '';
       }
     }
   };
@@ -58,61 +70,90 @@ export const ResumeReview = () => {
   };
 
   return (
-    <Card className="p-6">
-      <h2 className="text-2xl font-bold mb-4">Resume Review</h2>
-      <div className="space-y-4">
-        <div className="flex items-center gap-4">
-          <Input
-            type="file"
-            accept=".pdf,.doc,.docx,.rtf,.txt"
-            onChange={handleFileChange}
-            className="flex-1"
-          />
-          <Button
-            onClick={handleAnalyze}
-            disabled={!file || isLoading}
-            className="flex items-center gap-2"
-          >
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Upload className="h-4 w-4" />
-            )}
-            Analyze Resume
-          </Button>
-        </div>
-
-        {analysis && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <span className="text-lg font-semibold">Score:</span>
-              <span className="text-lg">{analysis.score}/100</span>
+    <div className="flex flex-col gap-6">
+      <Card className="p-6">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <h2 className="text-lg font-semibold">Upload Your Resume</h2>
+            <p className="text-sm text-gray-500">
+              Supported formats: {Object.values(SUPPORTED_FILE_TYPES).join(", ")}
+            </p>
+            <div className="flex gap-4">
+              <Input
+                type="file"
+                onChange={handleFileChange}
+                accept={Object.keys(SUPPORTED_FILE_TYPES).join(",")}
+                disabled={isUploading}
+              />
+              <Button
+                onClick={handleAnalyze}
+                disabled={!file || isLoading || isUploading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Analyze
+                  </>
+                )}
+              </Button>
             </div>
-
-            <Alert>
-              <AlertDescription>
-                <h3 className="font-semibold mb-2">Strengths:</h3>
-                <ul className="list-disc pl-4">
-                  {analysis.strengths.map((strength, index) => (
-                    <li key={index}>{strength}</li>
-                  ))}
-                </ul>
-              </AlertDescription>
-            </Alert>
-
-            <Alert>
-              <AlertDescription>
-                <h3 className="font-semibold mb-2">Suggestions:</h3>
-                <ul className="list-disc pl-4">
-                  {analysis.suggestions.map((suggestion, index) => (
-                    <li key={index}>{suggestion}</li>
-                  ))}
-                </ul>
-              </AlertDescription>
-            </Alert>
           </div>
-        )}
-      </div>
-    </Card>
+
+          {isUploading && (
+            <Alert>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <AlertDescription>
+                Processing your resume... This may take a few moments.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {file && !isUploading && (
+            <Alert>
+              <Upload className="mr-2 h-4 w-4" />
+              <AlertDescription>
+                {`${file.name} (${SUPPORTED_FILE_TYPES[file.type as keyof typeof SUPPORTED_FILE_TYPES]}) ready for analysis`}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {analysis && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-semibold">Score:</span>
+                <span className="text-lg">{analysis.score}/100</span>
+              </div>
+
+              <Alert>
+                <AlertDescription>
+                  <h3 className="font-semibold mb-2">Strengths:</h3>
+                  <ul className="list-disc pl-4">
+                    {analysis.strengths.map((strength, index) => (
+                      <li key={index}>{strength}</li>
+                    ))}
+                  </ul>
+                </AlertDescription>
+              </Alert>
+
+              <Alert>
+                <AlertDescription>
+                  <h3 className="font-semibold mb-2">Suggestions:</h3>
+                  <ul className="list-disc pl-4">
+                    {analysis.suggestions.map((suggestion, index) => (
+                      <li key={index}>{suggestion}</li>
+                    ))}
+                  </ul>
+                </AlertDescription>
+              </Alert>
+            </div>
+          )}
+        </div>
+      </Card>
+    </div>
   );
 };
