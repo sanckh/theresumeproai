@@ -18,6 +18,7 @@ export interface JobEntry {
   endDate?: string;
   description?: string;
   location?: string;
+  duties?: string[];
 }
 
 export interface EducationEntry {

@@ -8,6 +8,7 @@ interface Job {
   startDate: string;
   endDate: string;
   description: string;
+  duties: string[];
 }
 
 interface ResumeData {
@@ -83,7 +84,7 @@ export const ResumePreview = ({ data, template = "modern" }: ResumePreviewProps)
             <div className="space-y-4">
               {data.jobs.map((job, index) => (
                 <div key={index} className="break-inside-avoid print:break-inside-avoid pb-4 last:pb-0">
-                  <div className="flex justify-between items-start">
+                  <div className="flex justify-between items-start mb-2">
                     <div>
                       <h3 className={`text-lg font-bold ${template === "modern" ? "text-primary" : template === "classic" ? "text-gray-700" : "text-gray-800"}`}>
                         {job.title}
@@ -92,12 +93,21 @@ export const ResumePreview = ({ data, template = "modern" }: ResumePreviewProps)
                         {job.company}
                       </p>
                     </div>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-sm text-gray-500 whitespace-nowrap">
                       {job.startDate} - {job.endDate || "Present"}
                     </p>
                   </div>
                   {job.description && (
-                    <p className="mt-2 text-gray-700 leading-relaxed whitespace-pre-line">{job.description}</p>
+                    <p className="mt-2 mb-3 text-gray-700 leading-relaxed">{job.description}</p>
+                  )}
+                  {job.duties && job.duties.length > 0 && (
+                    <ul className="list-disc list-inside space-y-1 text-gray-700 pl-4">
+                      {job.duties.map((duty, dutyIndex) => (
+                        <li key={dutyIndex} className="leading-relaxed">
+                          {duty}
+                        </li>
+                      ))}
+                    </ul>
                   )}
                 </div>
               ))}
@@ -137,13 +147,13 @@ export const ResumePreview = ({ data, template = "modern" }: ResumePreviewProps)
         {data.skills && (
           <section className={`break-inside-avoid print:break-inside-avoid ${template === "minimal" ? "" : getSectionClasses()}`}>
             <h2 className={`text-xl font-bold mb-3 break-after-avoid print:break-after-avoid ${template === "minimal" ? "uppercase" : ""}`}>Skills</h2>
-            <div className="text-gray-700">
+            <p className="text-gray-700 leading-relaxed">
               {data.skills.split(',').map((skill, index, array) => (
-                <span key={index} className="inline-block">
+                <span key={index}>
                   {skill.trim()}{index < array.length - 1 ? " • " : ""}
                 </span>
               ))}
-            </div>
+            </p>
           </section>
         )}
       </div>

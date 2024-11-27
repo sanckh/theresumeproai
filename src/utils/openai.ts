@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { ResumeData } from './database';
+import { ResumeData, JobEntry } from './database';
 
 let openai: OpenAI | null = null;
 
@@ -37,7 +37,7 @@ export const analyzeResume = async (resumeText: string): Promise<{
           content: resumeText
         }
       ],
-      model: "gpt-4o",
+      model: "gpt-4o-mini",
       response_format: { type: "json_object" }
     });
 
@@ -75,16 +75,37 @@ export const enhanceWithAI = async (resumeData: ResumeData['data']) => {
           3. Clear, concise, and professional.
           4. Formatted for ATS (Applicant Tracking System) compatibility.
 
+          IMPORTANT: Preserve the structure of job duties as separate bullet points. DO NOT combine them into the description.
+
           Return the enhanced resume in the same JSON structure as the input, with these fields:
           {
             "fullName": "string",
             "email": "string",
             "phone": "string",
             "summary": "string",
-            "jobs": [{"title": "string", "company": "string", "startDate": "string", "endDate": "string", "description": "string"}],
-            "education": [{"institution": "string", "degree": "string", "startDate": "string", "endDate": "string"}],
+            "jobs": [{
+              "title": "string",
+              "company": "string",
+              "startDate": "string",
+              "endDate": "string",
+              "description": "string",
+              "duties": ["string"]
+            }],
+            "education": [{
+              "institution": "string",
+              "degree": "string",
+              "startDate": "string",
+              "endDate": "string"
+            }],
             "skills": "string"
-          }`
+          }
+
+          For each job's duties array:
+          1. Keep each duty as a separate bullet point
+          2. Enhance each duty to be action-oriented and impactful
+          3. Start each duty with a strong action verb
+          4. Include specific metrics and achievements where possible
+          5. Keep duties concise and focused`
         },
         {
           role: "user",
@@ -99,6 +120,12 @@ export const enhanceWithAI = async (resumeData: ResumeData['data']) => {
     }
 
     const parsedContent = JSON.parse(enhancedContent);
+
+    // Ensure each job has a duties array
+    parsedContent.jobs = parsedContent.jobs.map((job: JobEntry) => ({
+      ...job,
+      duties: job.duties || []
+    }));
 
     parsedContent.skills = formatSkills(parsedContent.skills);
 
