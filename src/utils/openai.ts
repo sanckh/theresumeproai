@@ -1,6 +1,5 @@
 import OpenAI from "openai";
 import { ResumeData, JobEntry } from "./database";
-import { encode } from "gpt-tokenizer";
 
 let openai: OpenAI | null = null;
 

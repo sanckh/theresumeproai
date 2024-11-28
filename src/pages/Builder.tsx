@@ -9,8 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAuth } from "@/contexts/AuthContext";
-import { saveResumeToDatabase, loadResumeFromDatabase, getAllResumes } from "@/utils/database";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import {
@@ -20,60 +18,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Save, ChevronDown, Edit2 } from "lucide-react";
+import { getAllResumes, getResume, ResumeData, saveResume } from "@/api/resume";
+import { useAuth } from "@/contexts/AuthContext";
 
 const STORAGE_KEY = "saved_resume";
 
-interface SavedResume {
-  id: string;
-  name: string;
-  data: {
-    fullName: string;
-    email: string;
-    phone: string;
-    summary: string;
-    jobs: {
-      title: string;
-      company: string;
-      startDate: string;
-      endDate?: string;
-      description?: string;
-      location?: string;
-    }[];
-    education: {
-      institution: string;
-      degree: string;
-      startDate: string;
-      endDate?: string;
-    }[];
-    skills: string;
-  };
-  updated_at: string;
+interface SavedResume extends ResumeData {
+  updated_at?: string;
 }
 
 const Builder = () => {
   const { user } = useAuth();
   const resumeRef = useRef<HTMLDivElement>(null);
-  const [resumeData, setResumeData] = useState<{
-    fullName: string;
-    email: string;
-    phone: string;
-    summary: string;
-    jobs: { 
-      title: string; 
-      company: string; 
-      startDate: string; 
-      endDate?: string; 
-      description?: string; 
-      location?: string; 
-    }[];
-    education: { 
-      institution: string; 
-      degree: string; 
-      startDate: string; 
-      endDate?: string; 
-    }[];
-    skills: string;
-  }>({
+  const [resumeData, setResumeData] = useState<ResumeData["data"]>({
     fullName: "",
     email: "",
     phone: "",
@@ -98,29 +55,33 @@ const Builder = () => {
       if (user?.uid) {
         try {
           const resumes = await getAllResumes(user.uid);
-          setSavedResumes(resumes);
-          
+          // Convert ResumeData[] to SavedResume[]
+          const savedResumesList: SavedResume[] = resumes.map((resume) => ({
+            user_id: resume.user_id,
+            id: resume.id || "",
+            name: resume.name,
+            data: resume.data,
+            updated_at: resume.updated_at || new Date().toISOString(),
+          }));
+          setSavedResumes(savedResumesList);
+
           // Load most recent resume if none is selected
-          if (resumes.length > 0 && !currentResumeId) {
-            const mostRecent = resumes[0];
+          if (savedResumesList.length > 0 && !currentResumeId) {
+            const mostRecent = savedResumesList[0];
             setCurrentResumeId(mostRecent.id);
             setCurrentResumeName(mostRecent.name);
-            setResumeData({
-              ...mostRecent.data,
-              jobs: Array.isArray(mostRecent.data.jobs) ? mostRecent.data.jobs : [],
-              education: Array.isArray(mostRecent.data.education) ? mostRecent.data.education : []
-            });
+            setResumeData(mostRecent.data);
             toast.info(`Loaded "${mostRecent.name}"`);
           }
         } catch (error) {
           console.error("Error loading resumes:", error);
-          toast.error("Failed to load your resumes");
+          toast.error("Failed to load saved resumes");
         }
       }
     };
 
     loadSavedResumes();
-  }, [user?.uid]);
+  }, [user]);
 
   // Load local storage resume if no user is logged in
   useEffect(() => {
@@ -128,71 +89,60 @@ const Builder = () => {
       const savedResume = localStorage.getItem(STORAGE_KEY);
       if (savedResume) {
         const parsedData = JSON.parse(savedResume);
-        setResumeData({
-          ...parsedData,
-          jobs: Array.isArray(parsedData.jobs) ? parsedData.jobs : [],
-          education: Array.isArray(parsedData.education) ? parsedData.education : []
-        });
+        setResumeData(parsedData);
         toast.info("Loaded your previously saved resume");
       }
     }
-  }, [user?.uid]);
+  }, [user]);
 
-  const handleSave = async (newName?: string) => {
+  const loadResumeById = async (resumeId: string) => {
+    if (!user?.uid) return;
+
     try {
-      setIsSaving(true);
-      
-      // Always save to localStorage as backup
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(resumeData));
-
-      if (user?.uid) {
-        // Save to database if user is logged in
-        const name = newName || currentResumeName;
-        const savedResume = await saveResumeToDatabase(
-          user.uid,
-          resumeData,
-          name,
-          currentResumeId
-        );
-
-        // Update current resume info
-        setCurrentResumeId(savedResume.id);
-        setCurrentResumeName(name);
-
-        // Refresh saved resumes list
-        const resumes = await getAllResumes(user.uid);
-        setSavedResumes(resumes);
-
-        toast.success(`Saved "${name}" to cloud storage!`);
-      } else {
-        toast.success("Resume saved to browser storage!");
-      }
-    } catch (error) {
-      console.error("Error saving resume:", error);
-      toast.error("Failed to save resume. Please try again.");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleLoadResume = async (resumeId: string) => {
-    try {
-      if (!user?.uid) return;
-
-      const resume = await loadResumeFromDatabase(user.uid, resumeId);
-      if (resume) {
-        setResumeData({
-          ...resume.data,
-          jobs: Array.isArray(resume.data.jobs) ? resume.data.jobs : [],
-          education: Array.isArray(resume.data.education) ? resume.data.education : []
-        });
-        setCurrentResumeId(resume.id);
-        setCurrentResumeName(resume.name);
-        toast.success(`Loaded "${resume.name}"`);
-      }
+      const resume = await getResume(user.uid, resumeId);
+      setResumeData(resume.data);
+      setCurrentResumeId(resume.id);
+      setCurrentResumeName(resume.name);
+      toast.success("Resume loaded successfully");
     } catch (error) {
       console.error("Error loading resume:", error);
       toast.error("Failed to load resume");
+    }
+  };
+
+  const handleSaveResume = async () => {
+    if (!user?.uid) {
+      toast.error("Please sign in to save your resume");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const resumeId = await saveResume(
+        user.uid,
+        resumeData,
+        currentResumeName,
+        currentResumeId || undefined
+      );
+
+      setCurrentResumeId(resumeId);
+      const updatedResumes = await getAllResumes(user.uid);
+      // Convert ResumeData[] to SavedResume[]
+      const savedResumesList: SavedResume[] = updatedResumes.map((resume) => ({
+        user_id: resume.user_id,
+        id: resume.id || "",
+        name: resume.name,
+        data: resume.data,
+        updated_at: resume.updated_at || new Date().toISOString(),
+      }));
+      setSavedResumes(savedResumesList);
+
+      toast.success("Resume saved successfully");
+    } catch (error) {
+      console.error("Error saving resume:", error);
+      toast.error("Failed to save resume");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -202,7 +152,7 @@ const Builder = () => {
       setCurrentResumeName(newName);
       // Reset current resume ID to create a new resume
       setCurrentResumeId(null);
-      await handleSave(newName);
+      await handleSaveResume();
     }
   };
 
@@ -226,7 +176,7 @@ const Builder = () => {
 
       const imgWidth = 210; // A4 width in mm
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      
+
       const pdf = new jsPDF({
         orientation: imgHeight > imgWidth ? "portrait" : "landscape",
         unit: "mm",
@@ -259,7 +209,7 @@ const Builder = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      
+
       <main className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
           <div className="flex items-center gap-4">
@@ -275,25 +225,27 @@ const Builder = () => {
                     onBlur={async () => {
                       setIsEditingName(false);
                       if (user?.uid) {
-                        await handleSave();
+                        await handleSaveResume();
                       }
                     }}
                     onKeyDown={async (e) => {
-                      if (e.key === 'Enter') {
+                      if (e.key === "Enter") {
                         setIsEditingName(false);
                         if (user?.uid) {
-                          await handleSave();
+                          await handleSaveResume();
                         }
                       }
                     }}
                     autoFocus
                   />
                 ) : (
-                  <div 
+                  <div
                     className="flex items-center gap-2 cursor-pointer group"
                     onClick={() => setIsEditingName(true)}
                   >
-                    <span className="font-medium text-gray-900">{currentResumeName}</span>
+                    <span className="font-medium text-gray-900">
+                      {currentResumeName}
+                    </span>
                     <Edit2 className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
                   </div>
                 )}
@@ -304,7 +256,7 @@ const Builder = () => {
             <Button variant="outline" onClick={() => setShowTemplates(!showTemplates)}>
               {showTemplates ? "Hide Templates" : "Choose Template"}
             </Button>
-            
+
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -315,7 +267,7 @@ const Builder = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => handleSave()}>
+                  <DropdownMenuItem onClick={() => handleSaveResume()}>
                     Save
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleSaveAs}>
@@ -329,7 +281,7 @@ const Builder = () => {
                       {savedResumes.map((resume) => (
                         <DropdownMenuItem
                           key={resume.id}
-                          onClick={() => handleLoadResume(resume.id)}
+                          onClick={() => loadResumeById(resume.id)}
                         >
                           {resume.name}
                         </DropdownMenuItem>
@@ -339,13 +291,17 @@ const Builder = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button variant="outline" onClick={() => handleSave()} disabled={isSaving}>
+              <Button
+                variant="outline"
+                onClick={() => handleSaveResume()}
+                disabled={isSaving}
+              >
                 <Save className="w-4 h-4 mr-2" />
                 {isSaving ? "Saving..." : "Save"}
               </Button>
             )}
-            
-            <Button 
+
+            <Button
               onClick={handleDownload}
               disabled={isDownloading}
             >

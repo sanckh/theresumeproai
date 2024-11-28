@@ -31,7 +31,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const userCredential = await authApi.signIn(email, password);
+      const userCredential = await authApi.login(email, password);
       setUser(userCredential.user);
     } catch (error) {
       console.error("Sign in error:", error);
@@ -41,7 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string) => {
     try {
-      const userCredential = await authApi.signUp(email, password);
+      const userCredential = await authApi.register(email, password);
       setUser(userCredential.user);
       return { error: null, confirmEmail: true };
     } catch (error) {

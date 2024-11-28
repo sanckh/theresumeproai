@@ -13,7 +13,7 @@ const History = () => {
 
   const { data: resumes, isLoading } = useQuery({
     queryKey: ["resumes", user?.uid],
-    queryFn: getAllResumes,
+    queryFn: ({ queryKey }) => getAllResumes(queryKey[1] as string),
     enabled: !!user?.uid,
   });
 
