@@ -6,7 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Clock, FileText, Star } from "lucide-react";
 import { format } from "date-fns";
-import { getAllResumes, ResumeData } from "@/utils/database";
+import { getAllResumes } from "@/api/resume";
 
 const History = () => {
   const { user } = useAuth();

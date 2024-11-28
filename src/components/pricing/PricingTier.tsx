@@ -5,8 +5,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
-import { db } from "@/firebase_options";
-import { doc, setDoc } from "firebase/firestore";
+import { updateTrialStatus } from "@/api/subscription";
 
 type PricingTierProps = {
   name: string;
@@ -52,15 +51,7 @@ export const PricingTier = ({
     // Handle one-time trial activation
     if (trialType && canUseTrial) {
       try {
-        const subscriptionData = {
-          tier: 'premium' as const,
-          has_used_creator_trial: trialType === 'creator' ? true : hasUsedCreatorTrial,
-          has_used_reviewer_trial: trialType === 'reviewer' ? true : hasUsedReviewerTrial,
-          updated_at: new Date().toISOString(),
-        };
-
-        await setDoc(doc(db, 'subscriptions', user.uid), subscriptionData, { merge: true });
-
+        await updateTrialStatus(user.uid, trialType);
         await checkSubscription();
         toast.success(`${trialType === 'creator' ? 'Creator' : 'Reviewer'} trial activated successfully!`);
         navigate("/builder");

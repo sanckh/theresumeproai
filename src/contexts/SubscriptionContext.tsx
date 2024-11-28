@@ -1,7 +1,6 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
-import { db } from "../firebase_options";
-import { doc, getDoc } from "firebase/firestore";
+import { getSubscriptionStatus, SubscriptionStatus } from "../api/subscription";
 
 type SubscriptionTier = 'free' | 'premium' | 'pro';
 
@@ -29,18 +28,10 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
 
     try {
-      const subscriptionDoc = await getDoc(doc(db, 'subscriptions', user.uid));
-      
-      if (subscriptionDoc.exists()) {
-        const subscription = subscriptionDoc.data();
-        setTier(subscription.tier as SubscriptionTier);
-        setHasUsedCreatorTrial(subscription.has_used_creator_trial || false);
-        setHasUsedReviewerTrial(subscription.has_used_reviewer_trial || false);
-      } else {
-        setTier('free');
-        setHasUsedCreatorTrial(false);
-        setHasUsedReviewerTrial(false);
-      }
+      const subscription = await getSubscriptionStatus(user.uid);
+      setTier(subscription.tier);
+      setHasUsedCreatorTrial(subscription.has_used_creator_trial);
+      setHasUsedReviewerTrial(subscription.has_used_reviewer_trial);
     } catch (error) {
       console.error('Error fetching subscription:', error);
       // Set default values on error
