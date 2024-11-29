@@ -40,7 +40,7 @@ export async function saveResume(
   name: string = "Untitled Resume",
   resumeId?: string
 ): Promise<string> {
-  const response = await fetch(`${API_URL}/saveresume/${userId}`, {
+  const response = await fetch(`${API_URL}/resume/saveresume/${userId}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -58,7 +58,7 @@ export async function saveResume(
 }
 
 export async function getResume(userId: string, resumeId: string): Promise<ResumeData> {
-  const response = await fetch(`${API_URL}/getresume/${userId}/${resumeId}`, {
+  const response = await fetch(`${API_URL}/resume/getresume/${userId}/${resumeId}`, {
     credentials: 'include',
   });
   
@@ -70,7 +70,7 @@ export async function getResume(userId: string, resumeId: string): Promise<Resum
 }
 
 export async function getAllResumes(userId: string): Promise<ResumeData[]> {
-  const response = await fetch(`${API_URL}/getallresumes/${userId}`, {
+  const response = await fetch(`${API_URL}/resume/getallresumes/${userId}`, {
     credentials: 'include',
   });
   
