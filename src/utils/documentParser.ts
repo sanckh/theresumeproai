@@ -3,8 +3,7 @@ import mammoth from "mammoth";
 import { parseResumeWithOpenAI, ParsedResume } from "./openai";
 
 // Initialize PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
-
+pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.worker.mjs`;
 export async function parseDocument(file: File): Promise<ParsedResume> {
   const fileType = file.type;
   let textContent = "";
