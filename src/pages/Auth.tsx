@@ -1,10 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Header } from "@/components/Header";
 import { AuthForm } from "@/components/auth/AuthForm";
+import { useSearchParams } from "react-router-dom";
 
 const Auth = () => {
+  const [searchParams] = useSearchParams();
   const [isSignUp, setIsSignUp] = useState(false);
+
+  useEffect(() => {
+    const signupParam = searchParams.get("signup");
+    if (signupParam === "true") {
+      setIsSignUp(true);
+    }
+  }, [searchParams]);
 
   return (
     <div className="min-h-screen bg-gray-50">

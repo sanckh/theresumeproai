@@ -49,6 +49,9 @@ export const Header = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <Link to="/history">History</Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleSignOut}>
                     Sign Out
                   </DropdownMenuItem>
@@ -56,9 +59,14 @@ export const Header = () => {
               </DropdownMenu>
             </>
           ) : (
-            <Button asChild>
-              <Link to="/auth">Sign In</Link>
-            </Button>
+            <>
+              <Button variant="outline" asChild>
+                <Link to="/auth?signup=true">Create Account</Link>
+              </Button>
+              <Button asChild>
+                <Link to="/auth">Sign In</Link>
+              </Button>
+            </>
           )}
         </nav>
       </div>

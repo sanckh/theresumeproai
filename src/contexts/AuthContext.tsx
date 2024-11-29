@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const userCredential = await authApi.register(email, password);
       setUser(userCredential.user);
-      return { error: null, confirmEmail: true };
+      return { error: null, confirmEmail: true }; 
     } catch (error) {
       console.error("Sign up error:", error);
       return { error: error as Error, confirmEmail: false };

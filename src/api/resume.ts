@@ -32,7 +32,7 @@ export interface ResumeData {
   updated_at?: string;
 }
 
-const API_URL = '/api';
+const API_URL = import.meta.env.VITE_API_URL;
 
 export async function saveResume(
   userId: string,
@@ -40,12 +40,13 @@ export async function saveResume(
   name: string = "Untitled Resume",
   resumeId?: string
 ): Promise<string> {
-  const response = await fetch(`${API_URL}/resume`, {
+  const response = await fetch(`${API_URL}/saveresume/${userId}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ userId, resumeData, name, resumeId }),
+    credentials: 'include',
+    body: JSON.stringify({ resumeData, name, resumeId }),
   });
 
   if (!response.ok) {
@@ -57,7 +58,9 @@ export async function saveResume(
 }
 
 export async function getResume(userId: string, resumeId: string): Promise<ResumeData> {
-  const response = await fetch(`${API_URL}/resume/${resumeId}?userId=${userId}`);
+  const response = await fetch(`${API_URL}/getresume/${userId}/${resumeId}`, {
+    credentials: 'include',
+  });
   
   if (!response.ok) {
     throw new Error('Failed to load resume');
@@ -67,7 +70,9 @@ export async function getResume(userId: string, resumeId: string): Promise<Resum
 }
 
 export async function getAllResumes(userId: string): Promise<ResumeData[]> {
-  const response = await fetch(`${API_URL}/resumes?userId=${userId}`);
+  const response = await fetch(`${API_URL}/getallresumes/${userId}`, {
+    credentials: 'include',
+  });
   
   if (!response.ok) {
     throw new Error('Failed to load resumes');

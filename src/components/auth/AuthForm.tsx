@@ -16,6 +16,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { resendVerificationEmail } from "@/api/auth";
 
 const baseSchema = {
   email: z.string().email("Please enter a valid email address"),
@@ -71,6 +72,15 @@ export const AuthForm = ({ isSignUp, onToggleMode }: AuthFormProps) => {
     form.reset(defaultValues);
   }, [isSignUp, form]);
 
+  const handleResendVerification = async () => {
+    try {
+      await resendVerificationEmail();
+      toast.success("Verification email sent! Please check your inbox.");
+    } catch (error) {
+      toast.error("Failed to resend verification email. Please try again.");
+    }
+  };
+
   const onSubmit = async (data: FormData) => {
     try {
       if (isSignUp) {
@@ -87,9 +97,28 @@ export const AuthForm = ({ isSignUp, onToggleMode }: AuthFormProps) => {
           navigate("/");
         }
       } else {
-        await signIn(data.email, data.password);
-        toast.success("Signed in successfully!");
-        navigate("/");
+        try {
+          await signIn(data.email, data.password);
+          toast.success("Signed in successfully!");
+          navigate("/");
+        } catch (error: any) {
+          if (error.message.includes('verify your email')) {
+            toast.error(
+              <div>
+                {error.message}
+                <Button
+                  variant="link"
+                  className="p-0 h-auto font-normal underline ml-2"
+                  onClick={handleResendVerification}
+                >
+                  Resend verification email
+                </Button>
+              </div>
+            );
+          } else {
+            toast.error(error.message);
+          }
+        }
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Authentication error");

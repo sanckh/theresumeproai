@@ -4,8 +4,8 @@ import { handleSaveResume, handleGetResume, handleGetAllResumes } from '../contr
 const router = Router();
 
 // Resume routes
-router.post('/saveresume', handleSaveResume);
-router.get('/getresume/:resumeId', handleGetResume);
-router.get('/getallresumes', handleGetAllResumes);
+router.post('/saveresume/:userId', handleSaveResume);
+router.get('/getresume/:userId/:resumeId', handleGetResume);
+router.get('/getallresumes/:userId', handleGetAllResumes);
 
 export default router;

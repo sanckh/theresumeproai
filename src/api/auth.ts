@@ -14,8 +14,8 @@ export const register = async (email: string, password: string) => {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      credentials: 'include',
     },
+    credentials: 'include',
     body: JSON.stringify({ email, password }),
   });
   const data = await response.json();
@@ -40,6 +40,11 @@ export const login = async (email: string, password: string) => {
 
     if (!response.ok) {
       throw new Error(data.error || 'Login failed');
+    }
+
+    // Check if email is verified
+    if (!data.user.emailVerified) {
+      throw new Error('Please verify your email before signing in. Check your inbox for the verification link.');
     }
 
     return data;
@@ -113,5 +118,27 @@ export const confirmPasswordReset = async (oobCode: string, newPassword: string)
 
   if (!response.ok) {
     throw new Error(data.message || 'Failed to reset password');
+  }
+};
+
+export const resendVerificationEmail = async () => {
+  try {
+    const response = await fetch(`${API_URL}/auth/resend-verification`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to resend verification email');
+    }
+
+    return data;
+  } catch (error: any) {
+    console.error('Failed to resend verification email:', error.message);
+    throw error;
   }
 };

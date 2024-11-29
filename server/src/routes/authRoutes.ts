@@ -1,12 +1,19 @@
 import { Router } from 'express';
-import { FirebaseController } from '../controllers/authController';
+import { 
+  getUserInfo, 
+  signIn, 
+  signUp, 
+  verifyToken,
+  resendVerificationEmailController 
+} from '../controllers/authController';
 
 const router = Router();
-const firebaseController = new FirebaseController();
 
 // Firebase auth routes
-router.post('/auth/signup', firebaseController.signUp);
-router.post('/auth/signin', firebaseController.signIn);
-router.post('/auth/verify-token', firebaseController.verifyToken);
+router.post('/register', signUp);
+router.post('/login', signIn);
+router.post('/verify-token', verifyToken);
+router.post('/resend-verification', resendVerificationEmailController);
+router.get('/user', getUserInfo);
 
 export default router;

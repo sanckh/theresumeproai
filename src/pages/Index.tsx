@@ -49,6 +49,7 @@ const Index = () => {
               <Link to="/builder">Try Builder Demo</Link>
             </Button>
           </div>
+
         </div>
 
         <div className="mt-16 grid md:grid-cols-2 lg:grid-cols-4 gap-8">

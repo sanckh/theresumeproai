@@ -18,7 +18,7 @@ import stripeRoutes from './src/routes/stripeRoutes';
 import subscriptionRoutes from './src/routes/subscriptionRoutes';
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = Number(process.env.PORT) || 3000;
 
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000,  // 1 minute window
@@ -42,23 +42,19 @@ const corsOptions: Parameters<typeof cors>[0] = {
       callback(new Error(`CORS policy does not allow access from origin: ${origin}`), false); // Block request
     }
   },
-  credentials: true, // Allow cookies and credentials
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  optionsSuccessStatus: 204, // For legacy browsers like IE11
+  allowedHeaders: ['Content-Type', 'Authorization', 'credentials', 'X-Requested-With'],
+  exposedHeaders: ['Content-Type', 'Authorization'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 };
 
-// Apply CORS middleware
+// Apply middleware
 app.use(cors(corsOptions));
-
-// Handle preflight requests (OPTIONS method)
-app.options('*', cors(corsOptions));
-app.use(requestLogger);
 app.use(bodyParser.json());
+app.use(requestLogger);
 app.use(apiLimiter);
-
-// Handle preflight requests
-app.options('*', cors(corsOptions));
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -71,6 +67,6 @@ app.get('/', (req: Request, res: Response) => {
   res.send('Backend running...');
 });
 
-app.listen(3000, '0.0.0.0', () => {
+app.listen(port, '0.0.0.0', () => {
   console.log(`Server is running on port ${port}`);
 });
