@@ -11,7 +11,6 @@ import bodyParser from 'body-parser';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { requestLogger } from './src/utils/logUtils';
-import authRoutes from './src/routes/authRoutes';
 import logRoutes from './src/routes/log_routes';
 import resumeRoutes from './src/routes/resumeRoutes';
 import stripeRoutes from './src/routes/stripeRoutes';
@@ -57,7 +56,6 @@ app.use(requestLogger);
 app.use(apiLimiter);
 
 // API Routes
-app.use('/api/auth', authRoutes);
 app.use('/api/logs', logRoutes);
 app.use('/api/resume', resumeRoutes);
 app.use('/api/stripe', stripeRoutes);

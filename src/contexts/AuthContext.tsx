@@ -1,6 +1,13 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { User } from "firebase/auth";
-import * as authApi from "../api/auth";
+import { 
+  User,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut as firebaseSignOut,
+  onAuthStateChanged,
+  sendEmailVerification
+} from "firebase/auth";
+import { auth } from "../config/firebase";
 
 interface AuthContextType {
   user: User | null;
@@ -25,14 +32,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // TODO: Implement token refresh and user session management
-    setLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+      setLoading(false);
+    });
+
+    return unsubscribe;
   }, []);
 
   const signIn = async (email: string, password: string) => {
     try {
-      const userCredential = await authApi.login(email, password);
-      setUser(userCredential.user);
+      await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
       console.error("Sign in error:", error);
       throw error;
@@ -41,9 +51,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string) => {
     try {
-      const userCredential = await authApi.register(email, password);
-      setUser(userCredential.user);
-      return { error: null, confirmEmail: true }; 
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      await sendEmailVerification(userCredential.user);
+      return { error: null, confirmEmail: true };
     } catch (error) {
       console.error("Sign up error:", error);
       return { error: error as Error, confirmEmail: false };
@@ -52,7 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      setUser(null);
+      await firebaseSignOut(auth);
     } catch (error) {
       console.error("Sign out error:", error);
       throw error;

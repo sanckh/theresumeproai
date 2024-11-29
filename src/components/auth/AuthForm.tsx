@@ -86,7 +86,22 @@ export const AuthForm = ({ isSignUp, onToggleMode }: AuthFormProps) => {
       if (isSignUp) {
         const { error, confirmEmail } = await signUp(data.email, data.password);
         if (error) {
-          toast.error(error.message);
+          // Handle Firebase auth errors
+          const errorCode = (error as { code?: string }).code;
+          let errorMessage = error.message;
+          
+          switch(errorCode) {
+            case 'auth/email-already-in-use':
+              errorMessage = 'This email is already registered. Please sign in instead.';
+              break;
+            case 'auth/invalid-email':
+              errorMessage = 'Please enter a valid email address.';
+              break;
+            case 'auth/weak-password':
+              errorMessage = 'Password is too weak. Please choose a stronger password.';
+              break;
+          }
+          toast.error(errorMessage);
         } else if (confirmEmail) {
           toast.success(
             "Account created successfully! Please check your email to verify your account."
@@ -101,11 +116,30 @@ export const AuthForm = ({ isSignUp, onToggleMode }: AuthFormProps) => {
           await signIn(data.email, data.password);
           toast.success("Signed in successfully!");
           navigate("/");
-        } catch (error: any) {
+        } catch (error) {
+          // Handle Firebase auth errors for sign in
+          const errorCode = (error as { code?: string }).code;
+          let errorMessage = (error as Error).message;
+          
+          switch(errorCode) {
+            case 'auth/user-not-found':
+            case 'auth/wrong-password':
+              errorMessage = 'Invalid email or password.';
+              break;
+            case 'auth/user-disabled':
+              errorMessage = 'This account has been disabled.';
+              break;
+            case 'auth/too-many-requests':
+              errorMessage = 'Too many failed attempts. Please try again later.';
+              break;
+            case 'auth/invalid-email':
+              errorMessage = 'Please enter a valid email address.';
+              break;
+          }
           if (error.message.includes('verify your email')) {
             toast.error(
               <div>
-                {error.message}
+                {errorMessage}
                 <Button
                   variant="link"
                   className="p-0 h-auto font-normal underline ml-2"
@@ -116,7 +150,7 @@ export const AuthForm = ({ isSignUp, onToggleMode }: AuthFormProps) => {
               </div>
             );
           } else {
-            toast.error(error.message);
+            toast.error(errorMessage);
           }
         }
       }
