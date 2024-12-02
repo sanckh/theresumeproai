@@ -39,15 +39,15 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
     trials: {
       creator: {
         used: trialData?.creator ? trialData.creator.remainingUses === 0 : false,
-        remaining: trialData?.creator?.remainingUses ?? 1
+        remaining: trialData?.creator?.remainingUses ?? (trialDoc.exists ? 0 : 1)
       },
       reviewer: {
         used: trialData?.reviewer ? trialData.reviewer.remainingUses === 0 : false,
-        remaining: trialData?.reviewer?.remainingUses ?? 1
+        remaining: trialData?.reviewer?.remainingUses ?? (trialDoc.exists ? 0 : 1)
       },
       cover_letter: {
         used: trialData?.cover_letter ? trialData.cover_letter.remainingUses === 0 : false,
-        remaining: trialData?.cover_letter?.remainingUses ?? 1
+        remaining: trialData?.cover_letter?.remainingUses ?? (trialDoc.exists ? 0 : 1)
       }
     }
   };

@@ -52,18 +52,19 @@ export const getSubscriptionStatus = async (userId: string): Promise<Subscriptio
   }
 };
 
-export const startTrial = async (userId: string, trialType: TrialType): Promise<SubscriptionStatus> => {
+export async function startTrial(userId: string, trialType: TrialType): Promise<SubscriptionStatus> {
   try {
     const headers = await getAuthHeaders();
     const response = await fetch(`${API_URL}/subscription/trial/start`, {
       method: 'POST',
       headers,
       credentials: 'include',
-      body: JSON.stringify({ trialType }),
+      body: JSON.stringify({ userId, trialType }),
     });
 
     if (!response.ok) {
-      throw new Error('Failed to start trial');
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to start trial');
     }
 
     const data = await response.json();

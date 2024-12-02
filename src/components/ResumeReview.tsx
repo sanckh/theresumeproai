@@ -10,6 +10,15 @@ import { analyzeResume, ParsedResume } from "@/utils/openai";
 import { parseDocument } from "@/utils/documentParser";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useNavigate } from "react-router-dom";
+import { decrementTrialUse, getSubscriptionStatus } from "@/api/subscription";
+import { auth } from "@/config/firebase";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface ResumeAnalysis {
   score: number;
@@ -39,6 +48,7 @@ export const ResumeReview = () => {
   const [file, setFile] = useState<File | null>(null);
   const [parsedResume, setParsedResume] = useState<ParsedResume | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
 
   const {
     data: analysis,
@@ -94,12 +104,38 @@ export const ResumeReview = () => {
     }
   };
 
-  const handleAnalyze = () => {
+  const handleAnalyze = async () => {
     if (!file) {
       toast.error("Please upload a resume first");
       return;
     }
-    refetch();
+
+    try {
+      // Check subscription status first
+      const userId = auth.currentUser?.uid;
+      if (!userId) {
+        toast.error("Please sign in to use resume review");
+        return;
+      }
+      
+      const status = await getSubscriptionStatus(userId);
+      
+      // Check if user has trial uses remaining or active subscription
+      if (status.status !== 'active' && (!status.trials.reviewer || status.trials.reviewer.remaining <= 0)) {
+        setShowUpgradeDialog(true);
+        return;
+      }
+      
+      // Decrement trial use if not on active subscription
+      if (status.status !== 'active') {
+        await decrementTrialUse(userId, 'reviewer');
+      }
+
+      refetch();
+    } catch (error) {
+      console.error("Error analyzing resume:", error);
+      toast.error("Failed to analyze resume. Please try again.");
+    }
   };
 
   return (
@@ -192,6 +228,40 @@ export const ResumeReview = () => {
           )}
         </div>
       </Card>
+
+      {/* Dialog component */}
+      {showUpgradeDialog && (
+        <Dialog defaultOpen={true} onOpenChange={setShowUpgradeDialog}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle className="text-xl">Ready for expert resume analysis?</DialogTitle>
+              <DialogDescription className="text-base mt-4">
+                You've used your trial review. Upgrade to Career Pro to get:
+                <ul className="list-disc pl-6 mt-2 space-y-1">
+                  <li>Unlimited resume reviews</li>
+                  <li>Expert insights and feedback</li>
+                  <li>Industry-specific recommendations</li>
+                  <li>Detailed scoring and analysis</li>
+                </ul>
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end gap-4 mt-6">
+              <Button variant="outline" onClick={() => setShowUpgradeDialog(false)}>
+                Maybe Later
+              </Button>
+              <Button 
+                onClick={() => {
+                  setShowUpgradeDialog(false);
+                  navigate('/pricing', { state: { highlightTier: 'career_pro' } });
+                }}
+                className="bg-primary hover:bg-primary/90"
+              >
+                Upgrade Now
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };

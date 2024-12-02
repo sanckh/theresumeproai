@@ -51,6 +51,17 @@ export const PricingTier: React.FC<PricingTierProps> = ({
     feature => !trials[feature].used && trials[feature].remaining > 0
   );
 
+  const allTrialsUsed = trialFeatures.every(
+    feature => (trials[feature].used && trials[feature].remaining === 0) || (trials[feature].used && trials[feature].remaining < 1)
+  );
+
+  const getButtonText = (): string => {
+    if (!user) return "Sign In to Start";
+    if (hasUnusedTrials) return "Start Free Trial";
+    if (allTrialsUsed) return "Upgrade Now";
+    return "Subscribe Now";
+  };
+
   const getTrialDestination = (features: readonly TrialType[]): string => {
     if (features.includes('creator')) return '/builder';
     if (features.includes('reviewer')) return '/review';
@@ -97,6 +108,22 @@ export const PricingTier: React.FC<PricingTierProps> = ({
         return;
       } catch (error) {
         console.error("Error starting trial:", error);
+        // If trial is already used, navigate to subscription confirmation
+        if (error instanceof Error && error.message.includes('Trial already used')) {
+          toast.info("Your trial has already been used. Let's get you upgraded!");
+          navigate("/subscription-confirm", {
+            state: {
+              tier: {
+                name,
+                price,
+                tier,
+                description,
+                features,
+              },
+            },
+          });
+          return;
+        }
         toast.error("Failed to start trial. Please try again.");
         return;
       }
@@ -134,6 +161,11 @@ export const PricingTier: React.FC<PricingTierProps> = ({
           Try Features Free
         </Badge>
       )}
+      {allTrialsUsed && (
+        <Badge className="absolute -top-3 right-4" variant="secondary">
+          Trial Used
+        </Badge>
+      )}
       <h3 className="text-2xl font-bold">{name}</h3>
       <div className="mt-4 flex items-baseline">
         <span className="text-4xl font-bold">{price}</span>
@@ -148,8 +180,12 @@ export const PricingTier: React.FC<PricingTierProps> = ({
           </li>
         ))}
       </ul>
-      <Button className="mt-8 w-full" onClick={handleSubscribe}>
-        {hasUnusedTrials ? "Start Free Trial" : "Subscribe Now"}
+      <Button 
+        className="mt-8 w-full" 
+        onClick={handleSubscribe}
+        variant={allTrialsUsed ? "secondary" : "default"}
+      >
+        {getButtonText()}
       </Button>
       {hasUnusedTrials && (
         <p className="mt-4 text-sm text-center text-gray-600">

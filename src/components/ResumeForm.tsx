@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -10,6 +10,17 @@ import { Plus, Wand2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { enhanceWithAI } from "@/utils/openai";
 import { formatPhoneNumber } from "@/utils/formatters";
+import { decrementTrialUse, getSubscriptionStatus, startTrial } from "@/api/subscription";
+import { auth } from "@/config/firebase";
+import { useNavigate } from "react-router-dom";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 export const ResumeForm = ({ onUpdate }: { onUpdate: (data: {
   fullName: string;
@@ -30,6 +41,8 @@ export const ResumeForm = ({ onUpdate }: { onUpdate: (data: {
     skills: "",
   });
   const [isEnhancing, setIsEnhancing] = useState(false);
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+  const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -133,19 +146,68 @@ export const ResumeForm = ({ onUpdate }: { onUpdate: (data: {
     }
   };
 
-  const enhanceResume = async () => {
-    setIsEnhancing(true);
+  const handleEnhanceWithAI = async () => {
     try {
+      // Check subscription status first, before setting isEnhancing
+      const userId = auth.currentUser?.uid;
+      if (!userId) {
+        toast.error("Please sign in to use AI enhancement");
+        return;
+      }
+      
+      const status = await getSubscriptionStatus(userId);
+      console.log('Subscription status:', status);
+      
+      // Check if user has trial uses remaining or active subscription
+      const hasNoTrialLeft = status.status !== 'active' && (!status.trials.creator || status.trials.creator.remaining <= 0);
+      console.log('Has no trial left:', hasNoTrialLeft);
+      
+      if (hasNoTrialLeft) {
+        console.log('Setting showUpgradeDialog to true');
+        setShowUpgradeDialog(true);
+        return;
+      }
+
+      // Only set isEnhancing if we're actually going to enhance
+      setIsEnhancing(true);
+      
+      // If not on active subscription and trial hasn't been started, start it
+      if (status.status !== 'active' && !status.trials.creator.used) {
+        try {
+          await startTrial(userId, 'creator');
+        } catch (error) {
+          if (error instanceof Error && error.message.includes('Trial already used')) {
+            setShowUpgradeDialog(true);
+            return;
+          }
+          throw error; // Re-throw other errors to be caught by outer catch block
+        }
+      }
+      
+      // Decrement trial use if not on active subscription
+      if (status.status !== 'active') {
+        await decrementTrialUse(userId, 'creator');
+      }
+
       const enhancedData = await enhanceWithAI(formData);
       setFormData(enhancedData);
       onUpdate(enhancedData);
-      toast.success("Resume enhanced with AI successfully!");
+      toast.success("Resume enhanced successfully!");
     } catch (error) {
-      toast.error("Failed to enhance resume. Please try again.");
+      console.error("Error enhancing resume:", error);
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error("Failed to enhance resume. Please try again.");
+      }
     } finally {
       setIsEnhancing(false);
     }
   };
+
+  useEffect(() => {
+    console.log('Dialog state changed:', showUpgradeDialog);
+  }, [showUpgradeDialog]);
 
   return (
     <Card className="p-6 space-y-6">
@@ -158,11 +220,44 @@ export const ResumeForm = ({ onUpdate }: { onUpdate: (data: {
       </div>
 
       <div className="flex gap-4 mt-4">
-        <Button onClick={enhanceResume} disabled={isEnhancing}>
+        <Button onClick={handleEnhanceWithAI} disabled={isEnhancing}>
           <Wand2 className="w-4 h-4 mr-2" />
           {isEnhancing ? "Enhancing..." : "Enhance with AI"}
         </Button>
       </div>
+
+      {showUpgradeDialog && (
+        <Dialog defaultOpen={true} onOpenChange={setShowUpgradeDialog}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle className="text-xl">Ready to unlock unlimited AI enhancements?</DialogTitle>
+              <DialogDescription className="text-base mt-4">
+                You've used your trial enhancement. Upgrade to Resume Pro to get:
+                <ul className="list-disc pl-6 mt-2 space-y-1">
+                  <li>Unlimited AI enhancements</li>
+                  <li>Advanced resume optimization</li>
+                  <li>Professional formatting</li>
+                  <li>ATS-friendly suggestions</li>
+                </ul>
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end gap-4 mt-6">
+              <Button variant="outline" onClick={() => setShowUpgradeDialog(false)}>
+                Maybe Later
+              </Button>
+              <Button 
+                onClick={() => {
+                  setShowUpgradeDialog(false);
+                  navigate('/pricing', { state: { highlightTier: 'resume_pro' } });
+                }}
+                className="bg-primary hover:bg-primary/90"
+              >
+                Upgrade Now
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       <div className="space-y-4">
         <div>
