@@ -1,40 +1,78 @@
-import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
-import { updateTrialStatus } from "@/api/subscription";
+import { startTrial } from "@/api/subscription";
 
-type PricingTierProps = {
+type TrialType = 'creator' | 'reviewer' | 'cover_letter';
+
+interface TrialStatus {
+  used: boolean;
+  remaining: number;
+}
+
+interface TrialsStatus {
+  creator: TrialStatus;
+  reviewer: TrialStatus;
+  cover_letter: TrialStatus;
+}
+
+interface PricingTierProps {
   name: string;
   price: string;
-  priceId?: string;
+  tier: string;
   description: string;
   features: string[];
   highlighted?: boolean;
-  trialType?: 'creator' | 'reviewer';
-};
+  trialFeatures: readonly TrialType[];
+  trials: TrialsStatus;
+  trialDescription?: string;
+}
 
-export const PricingTier = ({
+export const PricingTier: React.FC<PricingTierProps> = ({
   name,
   price,
-  priceId,
+  tier,
   description,
   features,
   highlighted = false,
-  trialType,
-}: PricingTierProps) => {
+  trialFeatures,
+  trials,
+  trialDescription,
+}) => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { tier, hasUsedCreatorTrial, hasUsedReviewerTrial, checkSubscription } = useSubscription();
+  const { refreshSubscription } = useSubscription();
 
-  const canUseTrial = trialType === 'creator' 
-    ? !hasUsedCreatorTrial 
-    : trialType === 'reviewer' 
-    ? !hasUsedReviewerTrial 
-    : false;
+  const hasUnusedTrials = trialFeatures.some(
+    feature => !trials[feature].used && trials[feature].remaining > 0
+  );
+
+  const getTrialDestination = (features: readonly TrialType[]): string => {
+    if (features.includes('creator')) return '/builder';
+    if (features.includes('reviewer')) return '/review';
+    if (features.includes('cover_letter')) return '/cover-letter';
+    return '/builder';
+  };
+
+  const getTrialSuccessMessage = (features: readonly TrialType[]): string => {
+    const featureMessages = features
+      .filter(feature => !trials[feature].used && trials[feature].remaining > 0)
+      .map(feature => {
+        switch (feature) {
+          case 'creator': return 'create one resume';
+          case 'reviewer': return 'review one resume';
+          case 'cover_letter': return 'create one cover letter';
+          default: return '';
+        }
+      })
+      .filter(Boolean);
+
+    return `Trial started! You can now ${featureMessages.join(' and ')}.`;
+  };
 
   const handleSubscribe = async () => {
     if (!user) {
@@ -43,47 +81,39 @@ export const PricingTier = ({
       return;
     }
 
-    if (price === "Free") {
-      navigate("/builder");
-      return;
-    }
-
-    // Handle one-time trial activation
-    if (trialType && canUseTrial) {
+    // If trial is available and not used, start trial for all available features
+    if (hasUnusedTrials) {
       try {
-        await updateTrialStatus(user.uid, trialType);
-        await checkSubscription();
-        toast.success(`${trialType === 'creator' ? 'Creator' : 'Reviewer'} trial activated successfully!`);
-        navigate("/builder");
+        // Start trials for all unused features
+        for (const feature of trialFeatures) {
+          if (!trials[feature].used && trials[feature].remaining > 0) {
+            await startTrial(user.uid, feature);
+          }
+        }
+        
+        await refreshSubscription();
+        toast.success(getTrialSuccessMessage(trialFeatures));
+        navigate(getTrialDestination(trialFeatures));
         return;
       } catch (error) {
-        console.error('Error activating trial:', error);
-        toast.error("Failed to activate trial");
+        console.error("Error starting trial:", error);
+        toast.error("Failed to start trial. Please try again.");
         return;
       }
     }
 
-    // Handle regular subscription
-    try {
-      toast.loading("Redirecting to checkout...");
-      const response = await fetch("/api/create-checkout-session", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+    // Navigate to subscription confirmation for paid subscription
+    navigate("/subscription-confirm", {
+      state: {
+        tier: {
+          name,
+          price,
+          tier,
+          description,
+          features,
         },
-        body: JSON.stringify({ priceId }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Network response was not ok");
-      }
-
-      const session = await response.json();
-      window.location.href = session.url;
-    } catch (error) {
-      console.error("Error:", error);
-      toast.error("Failed to initiate checkout");
-    }
+      },
+    });
   };
 
   return (
@@ -99,15 +129,15 @@ export const PricingTier = ({
           Most Popular
         </Badge>
       )}
-      {trialType && canUseTrial && (
+      {hasUnusedTrials && (
         <Badge className="absolute -top-3 right-4" variant="default">
-          Try Once For Free
+          Try Features Free
         </Badge>
       )}
       <h3 className="text-2xl font-bold">{name}</h3>
       <div className="mt-4 flex items-baseline">
         <span className="text-4xl font-bold">{price}</span>
-        {price !== "Free" && <span className="ml-2 text-gray-600">/month</span>}
+        <span className="ml-2 text-gray-600">/month</span>
       </div>
       <p className="mt-4 text-gray-600">{description}</p>
       <ul className="mt-6 space-y-4 flex-grow">
@@ -119,9 +149,9 @@ export const PricingTier = ({
         ))}
       </ul>
       <Button className="mt-8 w-full" onClick={handleSubscribe}>
-        {price === "Free" ? "Get Started" : canUseTrial ? "Try Now" : "Subscribe Now"}
+        {hasUnusedTrials ? "Start Free Trial" : "Subscribe Now"}
       </Button>
-      {trialType && canUseTrial && (
+      {hasUnusedTrials && (
         <p className="mt-4 text-sm text-center text-gray-600">
           One-time trial, no credit card required
         </p>

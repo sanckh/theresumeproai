@@ -3,50 +3,66 @@ import { PricingTier } from "@/components/pricing/PricingTier";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 
 const Pricing = () => {
-  const { tier, hasUsedCreatorTrial, hasUsedReviewerTrial } = useSubscription();
+  const { tier: currentTier, subscriptionStatus } = useSubscription();
+  const defaultTrials = {
+    creator: { used: false, remaining: 1 },
+    reviewer: { used: false, remaining: 1 },
+    cover_letter: { used: false, remaining: 1 }
+  };
+  const trials = subscriptionStatus?.trials ?? defaultTrials;
   
   const tiers = [
     {
-      name: "Free",
-      price: "Free",
-      description: "Try our basic features",
+      name: "Resume Creator",
+      price: "$7.99",
+      tier: "creator",
+      description: "Perfect for creating professional resumes",
       features: [
-        "1 basic resume template",
-        "Download as PDF",
-        "Real-time preview",
-        "Basic ATS compatibility check",
-      ],
-    },
-    {
-      name: "Premium Creator",
-      price: "$9.99",
-      priceId: "price_premium_creator",
-      description: "Perfect for creating resumes",
-      features: [
-        "All Free features",
+        "Create one resume for free (trial)",
         "10+ premium templates",
         "AI-powered content suggestions",
         "Advanced ATS optimization",
         "Unlimited resume versions",
         "Priority support",
       ],
-      highlighted: true,
-      trialType: "creator" as const,
+      trialFeatures: ['creator'] as const,
+      trials,
+      trialDescription: "Start with one free resume",
     },
     {
-      name: "Premium Reviewer",
-      price: "$9.99",
-      priceId: "price_premium_reviewer",
-      description: "Perfect for reviewing resumes",
+      name: "Resume Pro",
+      price: "$11.99",
+      tier: "pro",
+      description: "Create and review resumes like a professional",
       features: [
-        "All Free features",
+        "Everything in Resume Creator",
+        "Create & review one resume for free (trial)",
         "AI-powered resume analysis",
         "Detailed feedback",
         "Improvement suggestions",
         "Industry-specific tips",
-        "Priority support",
       ],
-      trialType: "reviewer" as const,
+      highlighted: true,
+      trialFeatures: ['creator', 'reviewer'] as const,
+      trials,
+      trialDescription: "Start with one free resume and review",
+    },
+    {
+      name: "Career Pro",
+      price: "$14.99",
+      tier: "career_pro",
+      description: "Complete career document solution",
+      features: [
+        "Everything in Resume Pro",
+        "Try all features once for free (trial)",
+        "AI Cover Letter Generator",
+        "Multiple cover letter templates",
+        "Industry-specific cover letters",
+        "Matching resume & cover letter designs",
+      ],
+      trialFeatures: ['creator', 'reviewer', 'cover_letter'] as const,
+      trials,
+      trialDescription: "Try all features once for free",
     },
   ];
 
@@ -59,7 +75,7 @@ const Pricing = () => {
             Choose the Perfect Plan for Your Career Journey
           </h1>
           <p className="text-xl text-gray-600">
-            All plans include our core features. Upgrade, downgrade, or cancel anytime.
+            Start with a free trial. No credit card required.
           </p>
         </div>
 

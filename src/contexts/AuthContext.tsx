@@ -15,6 +15,7 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<{ error: Error | null; confirmEmail: boolean }>;
   signOut: () => Promise<void>;
   loading: boolean;
+  onAuthStateChanged: (callback: (user: User | null) => void) => () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -69,8 +70,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const onAuthStateChangedCallback = (callback: (user: User | null) => void) => {
+    const unsubscribe = onAuthStateChanged(auth, callback);
+    return unsubscribe;
+  };
+
   return (
-    <AuthContext.Provider value={{ user, signIn, signUp, signOut, loading }}>
+    <AuthContext.Provider value={{ user, signIn, signUp, signOut, loading, onAuthStateChanged: onAuthStateChangedCallback }}>
       {children}
     </AuthContext.Provider>
   );

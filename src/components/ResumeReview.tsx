@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Input } from "./ui/input";
@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { analyzeResume, ParsedResume } from "@/utils/openai";
 import { parseDocument } from "@/utils/documentParser";
+import { useSubscription } from "@/contexts/SubscriptionContext";
+import { useNavigate } from "react-router-dom";
 
 interface ResumeAnalysis {
   score: number;
@@ -24,6 +26,16 @@ const SUPPORTED_FILE_TYPES = {
 } as const;
 
 export const ResumeReview = () => {
+  const { canUseFeature, subscriptionStatus } = useSubscription();
+  const navigate = useNavigate();
+  const canReview = canUseFeature('reviewer');
+
+  useEffect(() => {
+    if (!canReview) {
+      navigate('/pricing');
+    }
+  }, [canReview, navigate]);
+
   const [file, setFile] = useState<File | null>(null);
   const [parsedResume, setParsedResume] = useState<ParsedResume | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -35,10 +47,10 @@ export const ResumeReview = () => {
   } = useQuery<ResumeAnalysis>({
     queryKey: ["resumeAnalysis", file?.name],
     queryFn: async () => {
-      if (!parsedResume) throw new Error("No resume data available");
+      if (!parsedResume) return null;
       return analyzeResume(parsedResume);
     },
-    enabled: false,
+    enabled: true,
   });
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {

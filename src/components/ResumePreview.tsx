@@ -1,6 +1,10 @@
 import { Card } from "./ui/card";
-import { JobEntry, EducationEntry } from "@/utils/database";
 import { formatPhoneNumber } from "@/utils/formatters";
+import { useSubscription } from "@/contexts/SubscriptionContext";
+import { Alert, AlertDescription } from "./ui/alert";
+import { Button } from "./ui/button";
+import { useNavigate } from "react-router-dom";
+import { EducationEntry, JobEntry } from "@/api/resume";
 
 interface Job {
   title: string;
@@ -27,6 +31,27 @@ interface ResumePreviewProps {
 }
 
 export const ResumePreview = ({ data, template = "modern" }: ResumePreviewProps) => {
+  const { canUseFeature } = useSubscription();
+  const navigate = useNavigate();
+
+  if (!canUseFeature('creator')) {
+    return (
+      <Card className="p-6">
+        <Alert>
+          <AlertDescription>
+            You need a subscription to preview your resume. Get started with a free trial or upgrade your plan to access this feature.
+          </AlertDescription>
+          <Button 
+            onClick={() => navigate('/pricing')} 
+            className="mt-4"
+          >
+            View Pricing
+          </Button>
+        </Alert>
+      </Card>
+    );
+  }
+
   const getTemplateClasses = () => {
     switch (template) {
       case "classic":

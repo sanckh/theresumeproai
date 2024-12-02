@@ -20,6 +20,9 @@ import {
 import { Save, ChevronDown, Edit2 } from "lucide-react";
 import { getAllResumes, getResume, ResumeData, saveResume } from "@/api/resume";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/contexts/SubscriptionContext";
+import { useNavigate } from "react-router-dom";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const STORAGE_KEY = "saved_resume";
 
@@ -29,6 +32,9 @@ interface SavedResume extends ResumeData {
 
 const Builder = () => {
   const { user } = useAuth();
+  const { canUseFeature, subscriptionStatus } = useSubscription();
+  const canCreate = canUseFeature('creator');
+  const navigate = useNavigate();
   const resumeRef = useRef<HTMLDivElement>(null);
   const [resumeData, setResumeData] = useState<ResumeData["data"]>({
     fullName: "",
@@ -49,39 +55,52 @@ const Builder = () => {
   const [currentResumeName, setCurrentResumeName] = useState("Untitled Resume");
   const [isEditingName, setIsEditingName] = useState(false);
 
+  // If user is not signed in, redirect to sign in page
+  useEffect(() => {
+    if (!user) {
+      navigate('/auth');
+    }
+  }, [user, navigate]);
+
+  useEffect(() => {
+    if (!canCreate) {
+      navigate('/pricing');
+    }
+  }, [canCreate, navigate]);
+
   // Load saved resumes list when user logs in
   useEffect(() => {
     const loadSavedResumes = async () => {
-      if (user?.uid) {
-        try {
-          const resumes = await getAllResumes(user.uid);
-          // Convert ResumeData[] to SavedResume[]
-          const savedResumesList: SavedResume[] = resumes.map((resume) => ({
-            user_id: resume.user_id,
-            id: resume.id || "",
-            name: resume.name,
-            data: resume.data,
-            updated_at: resume.updated_at || new Date().toISOString(),
-          }));
-          setSavedResumes(savedResumesList);
+      if (!user?.uid) return; // Don't load resumes if no user
 
-          // Load most recent resume if none is selected
-          if (savedResumesList.length > 0 && !currentResumeId) {
-            const mostRecent = savedResumesList[0];
-            setCurrentResumeId(mostRecent.id);
-            setCurrentResumeName(mostRecent.name);
-            setResumeData(mostRecent.data);
-            toast.info(`Loaded "${mostRecent.name}"`);
-          }
-        } catch (error) {
-          console.error("Error loading resumes:", error);
-          toast.error("Failed to load saved resumes");
+      try {
+        const resumes = await getAllResumes(user.uid);
+        // Convert ResumeData[] to SavedResume[]
+        const savedResumesList: SavedResume[] = resumes.map((resume) => ({
+          user_id: resume.user_id,
+          id: resume.id || "",
+          name: resume.name,
+          data: resume.data,
+          updated_at: resume.updated_at || new Date().toISOString(),
+        }));
+        setSavedResumes(savedResumesList);
+
+        // Load most recent resume if none is selected
+        if (savedResumesList.length > 0 && !currentResumeId) {
+          const mostRecent = savedResumesList[0];
+          setCurrentResumeId(mostRecent.id);
+          setCurrentResumeName(mostRecent.name);
+          setResumeData(mostRecent.data);
+          toast.info(`Loaded "${mostRecent.name}"`);
         }
+      } catch (error) {
+        console.error("Error loading resumes:", error);
+        toast.error("Failed to load saved resumes");
       }
     };
 
     loadSavedResumes();
-  }, [user]);
+  }, [user, currentResumeId]);
 
   // Load local storage resume if no user is logged in
   useEffect(() => {

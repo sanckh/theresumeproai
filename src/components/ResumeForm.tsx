@@ -9,7 +9,6 @@ import { EducationExperience } from "./EducationExperience";
 import { Plus, Wand2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { enhanceWithAI } from "@/utils/openai";
-import { JobEntry, EducationEntry } from "@/utils/database";
 import { formatPhoneNumber } from "@/utils/formatters";
 
 export const ResumeForm = ({ onUpdate }: { onUpdate: (data: {

@@ -1,12 +1,29 @@
-import express from 'express';
-import { getSubscriptionStatusForUser, updateUserTrialStatus } from '../controllers/subscriptionController';
+import { Router } from 'express';
+import { authenticateUser } from '../middleware/authMiddleware';
+import {
+  getSubscriptionStatus,
+  createSubscription,
+  startTrial,
+  decrementTrialUse,
+  cancelSubscription
+} from '../controllers/subscriptionController';
 
-const router = express.Router();
+const router = Router();
 
-// Get user's subscription status
-router.get('/status/:userId', getSubscriptionStatusForUser);
+// All subscription routes require authentication
+router.use(authenticateUser);
 
-// Update user's trial status
-router.post('/trial', updateUserTrialStatus);
+// Get subscription status
+router.get('/status', getSubscriptionStatus);
+
+// Create or update subscription
+router.post('/create', createSubscription);
+
+// Trial management
+router.post('/trial/start', startTrial);
+router.post('/trial/use', decrementTrialUse);
+
+// Cancel subscription
+router.delete('/cancel', cancelSubscription);
 
 export default router;

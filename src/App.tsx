@@ -12,6 +12,7 @@ import Auth from "./pages/Auth";
 import Templates from "./pages/Templates";
 import History from "./pages/History";
 import Success from "./pages/Success";
+import SubscriptionConfirm from "./pages/SubscriptionConfirm";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,7 @@ const App = () => (
               <Route path="/templates" element={<Templates />} />
               <Route path="/history" element={<History />} />
               <Route path="/success" element={<Success />} />
+              <Route path="/subscription-confirm" element={<SubscriptionConfirm />} />
             </Routes>
           </BrowserRouter>
         </TooltipProvider>
