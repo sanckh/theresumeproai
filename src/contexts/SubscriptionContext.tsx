@@ -35,11 +35,14 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const refreshSubscription = async () => {
     try {
       if (!user) {
+        console.log('No user, setting default subscription status');
         setSubscriptionStatus(defaultSubscriptionStatus);
         return;
       }
 
+      console.log('Refreshing subscription status for user:', user.uid);
       const status = await getSubscriptionStatus(user.uid);
+      console.log('Got subscription status:', status);
       setSubscriptionStatus(status);
       setError(null);
     } catch (err) {
@@ -53,10 +56,13 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const auth = useAuth();
 
   useEffect(() => {
+    console.log('Auth state changed, current user:', auth.currentUser?.uid);
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
+        console.log('User logged in, refreshing subscription');
         refreshSubscription();
       } else {
+        console.log('User logged out, setting default status');
         setSubscriptionStatus(defaultSubscriptionStatus);
         setLoading(false);
       }

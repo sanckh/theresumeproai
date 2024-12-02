@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
-import { startTrial } from "@/api/subscription";
+import type { TrialType } from "@/api/subscription";
 
 type TrialType = 'creator' | 'reviewer' | 'cover_letter';
 
@@ -45,14 +45,14 @@ export const PricingTier: React.FC<PricingTierProps> = ({
 }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { refreshSubscription } = useSubscription();
+  const { startTrial: startTrialFromContext, refreshSubscription } = useSubscription();
 
   const hasUnusedTrials = trialFeatures.some(
-    feature => !trials[feature].used && trials[feature].remaining > 0
+    feature => trials[feature].remaining > 0
   );
 
   const allTrialsUsed = trialFeatures.every(
-    feature => (trials[feature].used && trials[feature].remaining === 0) || (trials[feature].used && trials[feature].remaining < 1)
+    feature => trials[feature].remaining === 0
   );
 
   const getButtonText = (): string => {
@@ -71,7 +71,7 @@ export const PricingTier: React.FC<PricingTierProps> = ({
 
   const getTrialSuccessMessage = (features: readonly TrialType[]): string => {
     const featureMessages = features
-      .filter(feature => !trials[feature].used && trials[feature].remaining > 0)
+      .filter(feature => trials[feature].remaining > 0)
       .map(feature => {
         switch (feature) {
           case 'creator': return 'create one resume';
@@ -97,8 +97,8 @@ export const PricingTier: React.FC<PricingTierProps> = ({
       try {
         // Start trials for all unused features
         for (const feature of trialFeatures) {
-          if (!trials[feature].used && trials[feature].remaining > 0) {
-            await startTrial(user.uid, feature);
+          if (trials[feature].remaining > 0) {
+            await startTrialFromContext(feature);
           }
         }
         

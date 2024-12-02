@@ -30,26 +30,29 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
   }
 
   const userData = userDoc.data();
-  const trialData = trialDoc.exists ? trialDoc.data() as Record<TrialType, TrialData> : null;
+  const trialData = trialDoc.exists ? trialDoc.data() : null;
+
+  // Map the Firebase trial data to our frontend format
+  const trials = {
+    creator: {
+      used: trialData?.creator?.remainingUses === 0,
+      remaining: trialData?.creator?.remainingUses ?? (trialDoc.exists ? 0 : 1)
+    },
+    reviewer: {
+      used: trialData?.reviewer?.remainingUses === 0,
+      remaining: trialData?.reviewer?.remainingUses ?? (trialDoc.exists ? 0 : 1)
+    },
+    cover_letter: {
+      used: trialData?.cover_letter?.remainingUses === 0,
+      remaining: trialData?.cover_letter?.remainingUses ?? (trialDoc.exists ? 0 : 1)
+    }
+  };
 
   return {
     tier: userData?.tier || SubscriptionTier.RESUME_CREATOR,
     status: userData?.status || 'inactive',
     subscription_end_date: userData?.subscription_end_date,
-    trials: {
-      creator: {
-        used: trialData?.creator ? trialData.creator.remainingUses === 0 : false,
-        remaining: trialData?.creator?.remainingUses ?? (trialDoc.exists ? 0 : 1)
-      },
-      reviewer: {
-        used: trialData?.reviewer ? trialData.reviewer.remainingUses === 0 : false,
-        remaining: trialData?.reviewer?.remainingUses ?? (trialDoc.exists ? 0 : 1)
-      },
-      cover_letter: {
-        used: trialData?.cover_letter ? trialData.cover_letter.remainingUses === 0 : false,
-        remaining: trialData?.cover_letter?.remainingUses ?? (trialDoc.exists ? 0 : 1)
-      }
-    }
+    trials
   };
 }
 
@@ -82,14 +85,24 @@ export async function startTrial(
     }
   }
 
-  await trialRef.set({
+  const updateData = trialDoc.exists ? {
     [trialType]: {
       trialType,
       remainingUses: 1,
       started_at: new Date().toISOString()
     }
-  }, { merge: true });
+  } : {
+    creator: { trialType: 'creator', remainingUses: 1 },
+    reviewer: { trialType: 'reviewer', remainingUses: 1 },
+    cover_letter: { trialType: 'cover_letter', remainingUses: 1 },
+    [trialType]: {
+      trialType,
+      remainingUses: 1,
+      started_at: new Date().toISOString()
+    }
+  };
 
+  await trialRef.set(updateData, { merge: true });
   return getSubscriptionStatus(userId);
 }
 
@@ -101,7 +114,12 @@ export async function decrementTrialUse(
   const trialDoc = await trialRef.get();
 
   if (!trialDoc.exists) {
-    throw new Error('No trial found');
+    await trialRef.set({
+      creator: { trialType: 'creator', remainingUses: 1 },
+      reviewer: { trialType: 'reviewer', remainingUses: 1 },
+      cover_letter: { trialType: 'cover_letter', remainingUses: 1 }
+    });
+    return decrementTrialUse(userId, trialType); // Retry after initialization
   }
 
   const trialData = trialDoc.data() as Record<TrialType, TrialData>;

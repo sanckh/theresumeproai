@@ -22,7 +22,7 @@ export interface SubscriptionStatus {
 }
 
 const getAuthHeaders = async () => {
-  const token = await auth.currentUser?.getIdToken(true); // Force token refresh
+  const token = await auth.currentUser?.getIdToken(true);
   if (!token) {
     throw new Error('Not authenticated');
   }

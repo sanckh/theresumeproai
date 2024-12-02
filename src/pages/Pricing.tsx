@@ -77,6 +77,12 @@ const Pricing = () => {
           <p className="text-xl text-gray-600">
             Start with a free trial. No credit card required.
           </p>
+          {/* Debug information */}
+          <div className="mt-4 p-4 bg-gray-100 rounded-lg text-left text-sm">
+            <pre className="whitespace-pre-wrap">
+              Trial Status: {JSON.stringify(subscriptionStatus?.trials, null, 2)}
+            </pre>
+          </div>
         </div>
 
         <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
