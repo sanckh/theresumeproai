@@ -3,18 +3,12 @@ import Stripe from 'stripe';
 import { db } from '../../firebase_options';
 import { collection, doc, getDoc, getDocs, query, setDoc, where } from 'firebase/firestore';
 import { logToFirestore } from './logs_service';
+import { SubscriptionStatus, SubscriptionTier } from '../../types/subscription';
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY, {
   apiVersion: '2024-08-27',
   
 });
-
-interface SubscriptionStatus {
-  status: string;
-  tier: string;
-  customerId?: string;
-  subscriptionId?: string;
-}
 
 export async function createCheckoutSession(priceId: string, userId: string): Promise<string> {
   const session = await stripe.checkout.sessions.create({
@@ -62,16 +56,15 @@ export async function handleWebhook(payload: string | Buffer, signature: string)
 }
 
 export async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session): Promise<void> {
-  const userId = session.metadata?.userId;
+  const userId = session.client_reference_id;
   if (!userId) {
-    throw new Error('No user ID in session metadata');
+    throw new Error('No userId found in session');
   }
 
   const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
   const priceId = subscription.items.data[0].price.id;
 
   await updateSubscriptionInFirestore(userId, subscription, priceId);
-
 }
 
 export async function handleSubscriptionUpdate(subscription: Stripe.Subscription): Promise<void> {
@@ -79,27 +72,31 @@ export async function handleSubscriptionUpdate(subscription: Stripe.Subscription
   const userId = await findUserIdByCustomerId(customerId);
   
   if (!userId) {
-    throw new Error('User not found for customer ID: ' + customerId);
+    throw new Error('No user found for customer');
   }
 
   const priceId = subscription.items.data[0].price.id;
   await updateSubscriptionInFirestore(userId, subscription, priceId);
-
-  await logToFirestore({
-    eventType: 'INFO',
-    message: `Subscription ${subscription.status} for user`,
-    data: { userId, subscriptionId: subscription.id, status: subscription.status },
-    timestamp: new Date().toISOString(),
-  });
 }
 
 export async function getSubscriptionStatus(userId: string): Promise<SubscriptionStatus> {
-  const subscriptionDoc = await db.collection('subscriptions').doc(userId).get();
-  
-  if (!subscriptionDoc.exists) {
-    return { status: 'none', tier: 'free' };
+  const userDoc = await db.collection('subscriptions').doc(userId).get();
+
+  if (!userDoc.exists) {
+    return {
+      tier: SubscriptionTier.RESUME_CREATOR,
+      status: 'inactive',
+      hasStartedTrial: false
+    };
   }
-  return subscriptionDoc.data() as SubscriptionStatus;
+
+  const data = userDoc.data();
+  return {
+    tier: data?.tier || SubscriptionTier.RESUME_CREATOR,
+    status: data?.status || 'inactive',
+    subscription_end_date: data?.subscription_end_date,
+    hasStartedTrial: data?.hasStartedTrial || false
+  };
 }
 
 export async function cancelSubscription(userId: string): Promise<void> {

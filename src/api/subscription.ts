@@ -1,25 +1,20 @@
+import { SubscriptionTier } from 'server/types/subscription';
 import { auth } from '../config/firebase';
 
-const API_URL = import.meta.env.VITE_API_URL;
-
-export type SubscriptionTier = 'free' | 'resume_creator' | 'resume_pro' | 'career_pro';
-export type TrialType = 'creator' | 'reviewer' | 'cover_letter';
-
-export interface TrialStatus {
-  used: boolean;
-  remaining: number;
-}
-
 export interface SubscriptionStatus {
+  isActive: boolean;
   tier: SubscriptionTier;
-  status: 'active' | 'inactive' | 'expired';
-  subscription_end_date?: string | null;
+  expiresAt?: string;
+  cancelAtPeriodEnd?: boolean;
   trials: {
-    creator: TrialStatus;
-    reviewer: TrialStatus;
-    cover_letter: TrialStatus;
+    creator: { remaining: number };
+    reviewer: { remaining: number };
+    cover_letter: { remaining: number };
   };
+  hasStartedTrial: boolean;
 }
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 const getAuthHeaders = async () => {
   const token = await auth.currentUser?.getIdToken(true);
@@ -36,63 +31,51 @@ export const getSubscriptionStatus = async (userId: string): Promise<Subscriptio
   try {
     const headers = await getAuthHeaders();
     const response = await fetch(`${API_URL}/subscription/status`, {
-      credentials: 'include',
+      method: 'GET',
       headers,
     });
-    
     if (!response.ok) {
-      throw new Error('Failed to fetch subscription status');
+      throw new Error('Failed to get subscription status');
     }
-    
-    const data = await response.json();
-    return data.subscription;
+    return response.json();
   } catch (error) {
-    console.error('Subscription status error:', error);
+    console.error('Error getting subscription status:', error);
     throw error;
   }
 };
 
-export async function startTrial(userId: string, trialType: TrialType): Promise<SubscriptionStatus> {
+export const startTrial = async (userId: string): Promise<SubscriptionStatus> => {
   try {
     const headers = await getAuthHeaders();
     const response = await fetch(`${API_URL}/subscription/trial/start`, {
       method: 'POST',
       headers,
-      credentials: 'include',
-      body: JSON.stringify({ userId, trialType }),
+      body: JSON.stringify({ userId })
     });
-
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to start trial');
+      throw new Error('Failed to start trial');
     }
-
-    const data = await response.json();
-    return data.subscription;
+    return response.json();
   } catch (error) {
-    console.error('Start trial error:', error);
+    console.error('Error starting trial:', error);
     throw error;
   }
 };
 
-export const decrementTrialUse = async (userId: string, trialType: TrialType): Promise<SubscriptionStatus> => {
+export const decrementTrialUse = async (userId: string): Promise<SubscriptionStatus> => {
   try {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_URL}/subscription/trial/use`, {
+    const response = await fetch(`${API_URL}/subscription/trial/decrement`, {
       method: 'POST',
       headers,
-      credentials: 'include',
-      body: JSON.stringify({ trialType }),
+      body: JSON.stringify({ userId })
     });
-
     if (!response.ok) {
-      throw new Error('Failed to update trial usage');
+      throw new Error('Failed to decrement trial use');
     }
-
-    const data = await response.json();
-    return data.subscription;
+    return response.json();
   } catch (error) {
-    console.error('Decrement trial error:', error);
+    console.error('Error decrementing trial use:', error);
     throw error;
   }
 };
@@ -107,18 +90,14 @@ export const createSubscription = async (
     const response = await fetch(`${API_URL}/subscription/create`, {
       method: 'POST',
       headers,
-      credentials: 'include',
-      body: JSON.stringify({ tier, duration }),
+      body: JSON.stringify({ userId, tier, duration }),
     });
-
     if (!response.ok) {
       throw new Error('Failed to create subscription');
     }
-
-    const data = await response.json();
-    return data.subscription;
+    return response.json();
   } catch (error) {
-    console.error('Create subscription error:', error);
+    console.error('Error creating subscription:', error);
     throw error;
   }
 };
@@ -127,19 +106,16 @@ export const cancelSubscription = async (userId: string): Promise<SubscriptionSt
   try {
     const headers = await getAuthHeaders();
     const response = await fetch(`${API_URL}/subscription/cancel`, {
-      method: 'DELETE',
+      method: 'POST',
       headers,
-      credentials: 'include',
+      body: JSON.stringify({ userId }),
     });
-
     if (!response.ok) {
       throw new Error('Failed to cancel subscription');
     }
-
-    const data = await response.json();
-    return data.subscription;
+    return response.json();
   } catch (error) {
-    console.error('Cancel subscription error:', error);
+    console.error('Error canceling subscription:', error);
     throw error;
   }
 };

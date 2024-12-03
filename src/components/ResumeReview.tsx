@@ -19,6 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { SubscriptionStatus } from '../../server/types/subscription';
 
 interface ResumeAnalysis {
   score: number;
@@ -119,16 +120,18 @@ export const ResumeReview = () => {
       }
       
       const status = await getSubscriptionStatus(userId);
+      console.log('Got subscription status:', status);
       
-      // Check if user has trial uses remaining or active subscription
-      if (status.status !== 'active' && (!status.trials.reviewer || status.trials.reviewer.remaining <= 0)) {
+      // If status is active (either paid subscription or valid trial), allow access
+      if (status.isActive) {
+        console.log('Setting showUpgradeDialog to true - no active subscription or trial');
         setShowUpgradeDialog(true);
         return;
       }
-      
-      // Decrement trial use if not on active subscription
-      if (status.status !== 'active') {
-        await decrementTrialUse(userId, 'reviewer');
+
+      // Only decrement trial use if this is a trial
+      if (status.hasStartedTrial) {
+        await decrementTrialUse(userId);
       }
 
       refetch();

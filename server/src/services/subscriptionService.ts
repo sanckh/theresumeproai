@@ -1,5 +1,5 @@
 import { db } from '../../firebase_options';
-import { SubscriptionStatus, SubscriptionTier, TrialType } from '../interfaces/subscription';
+import { SubscriptionStatus, SubscriptionTier } from '../../types/subscription';
 
 interface CreateSubscriptionData {
   tier: SubscriptionTier;
@@ -7,7 +7,6 @@ interface CreateSubscriptionData {
 }
 
 interface TrialData {
-  trialType: TrialType;
   remainingUses: number;
 }
 
@@ -21,38 +20,47 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
   const userDoc = await db.collection('subscriptions').doc(userId).get();
   const trialDoc = await db.collection('trials').doc(userId).get();
 
-  if (!userDoc.exists) {
+  // If user has a trial record, they have access to all features
+  if (trialDoc.exists) {
+    const trialData = trialDoc.data();
     return {
       tier: SubscriptionTier.RESUME_CREATOR,
-      status: 'inactive',
-      trials: defaultTrials
+      status: 'active', 
+      hasStartedTrial: true,
+      trials: {
+        creator: { remaining: trialData?.creator?.remainingUses || 0 },
+        reviewer: { remaining: trialData?.reviewer?.remainingUses || 0 },
+        cover_letter: { remaining: trialData?.cover_letter?.remainingUses || 0 }
+      }
     };
   }
 
-  const userData = userDoc.data();
-  const trialData = trialDoc.exists ? trialDoc.data() : null;
+  // If user has a paid subscription
+  if (userDoc.exists) {
+    const userData = userDoc.data();
+    return {
+      tier: userData?.tier || SubscriptionTier.NONE,
+      status: userData?.status || 'inactive',
+      subscription_end_date: userData?.subscription_end_date,
+      hasStartedTrial: true,
+      trials: {
+        creator: { remaining: 0 },
+        reviewer: { remaining: 0 },
+        cover_letter: { remaining: 0 }
+      }
+    };
+  }
 
-  // Map the Firebase trial data to our frontend format
-  const trials = {
-    creator: {
-      used: trialData?.creator?.remainingUses === 0,
-      remaining: trialData?.creator?.remainingUses ?? (trialDoc.exists ? 0 : 1)
-    },
-    reviewer: {
-      used: trialData?.reviewer?.remainingUses === 0,
-      remaining: trialData?.reviewer?.remainingUses ?? (trialDoc.exists ? 0 : 1)
-    },
-    cover_letter: {
-      used: trialData?.cover_letter?.remainingUses === 0,
-      remaining: trialData?.cover_letter?.remainingUses ?? (trialDoc.exists ? 0 : 1)
-    }
-  };
-
+  // New user with no trial or subscription
   return {
-    tier: userData?.tier || SubscriptionTier.RESUME_CREATOR,
-    status: userData?.status || 'inactive',
-    subscription_end_date: userData?.subscription_end_date,
-    trials
+    tier: SubscriptionTier.NONE,
+    status: 'inactive',
+    hasStartedTrial: false,
+    trials: {
+      creator: { remaining: 0 },
+      reviewer: { remaining: 0 },
+      cover_letter: { remaining: 0 }
+    }
   };
 }
 
@@ -73,64 +81,50 @@ export async function createSubscription(
 
 export async function startTrial(
   userId: string,
-  trialType: TrialType
 ): Promise<SubscriptionStatus> {
   const trialRef = db.collection('trials').doc(userId);
   const trialDoc = await trialRef.get();
 
   if (trialDoc.exists) {
-    const trialData = trialDoc.data() as Record<TrialType, TrialData>;
-    if (trialData[trialType]?.remainingUses === 0) {
-      throw new Error('Trial already used');
-    }
+    throw new Error('Trial already used');
   }
 
-  const updateData = trialDoc.exists ? {
-    [trialType]: {
-      trialType,
-      remainingUses: 1,
-      started_at: new Date().toISOString()
-    }
-  } : {
-    creator: { trialType: 'creator', remainingUses: 1 },
-    reviewer: { trialType: 'reviewer', remainingUses: 1 },
-    cover_letter: { trialType: 'cover_letter', remainingUses: 1 },
-    [trialType]: {
-      trialType,
-      remainingUses: 1,
-      started_at: new Date().toISOString()
-    }
-  };
+  // Initialize all trial types at once
+  await trialRef.set({
+    creator: { remainingUses: 1, started_at: new Date().toISOString() },
+    reviewer: { remainingUses: 1, started_at: new Date().toISOString() },
+    cover_letter: { remainingUses: 1, started_at: new Date().toISOString() }
+  });
 
-  await trialRef.set(updateData, { merge: true });
   return getSubscriptionStatus(userId);
 }
 
 export async function decrementTrialUse(
   userId: string,
-  trialType: TrialType
 ): Promise<SubscriptionStatus> {
   const trialRef = db.collection('trials').doc(userId);
   const trialDoc = await trialRef.get();
 
   if (!trialDoc.exists) {
-    await trialRef.set({
-      creator: { trialType: 'creator', remainingUses: 1 },
-      reviewer: { trialType: 'reviewer', remainingUses: 1 },
-      cover_letter: { trialType: 'cover_letter', remainingUses: 1 }
-    });
-    return decrementTrialUse(userId, trialType); // Retry after initialization
+    throw new Error('No trial found');
   }
 
-  const trialData = trialDoc.data() as Record<TrialType, TrialData>;
-  if (!trialData[trialType] || trialData[trialType].remainingUses === 0) {
-    throw new Error('No remaining trial uses');
+  const trialData = trialDoc.data();
+  if (!trialData) {
+    throw new Error('No trial data found');
   }
 
-  await trialRef.update({
-    [`${trialType}.remainingUses`]: trialData[trialType].remainingUses - 1,
-    [`${trialType}.last_used`]: new Date().toISOString()
-  });
+  const features = ['creator', 'reviewer', 'cover_letter'];
+  
+  // Update all features that have remaining uses
+  for (const feature of features) {
+    if (trialData[feature]?.remainingUses > 0) {
+      await trialRef.update({
+        [`${feature}.remainingUses`]: trialData[feature].remainingUses - 1,
+        [`${feature}.last_used`]: new Date().toISOString()
+      });
+    }
+  }
 
   return getSubscriptionStatus(userId);
 }

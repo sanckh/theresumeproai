@@ -5,20 +5,6 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
-import type { TrialType } from "@/api/subscription";
-
-type TrialType = 'creator' | 'reviewer' | 'cover_letter';
-
-interface TrialStatus {
-  used: boolean;
-  remaining: number;
-}
-
-interface TrialsStatus {
-  creator: TrialStatus;
-  reviewer: TrialStatus;
-  cover_letter: TrialStatus;
-}
 
 interface PricingTierProps {
   name: string;
@@ -27,8 +13,7 @@ interface PricingTierProps {
   description: string;
   features: string[];
   highlighted?: boolean;
-  trialFeatures: readonly TrialType[];
-  trials: TrialsStatus;
+  trialFeatures: ReadonlyArray<'creator' | 'reviewer' | 'cover_letter'>;
   trialDescription?: string;
 }
 
@@ -40,49 +25,16 @@ export const PricingTier: React.FC<PricingTierProps> = ({
   features,
   highlighted = false,
   trialFeatures,
-  trials,
   trialDescription,
 }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { startTrial: startTrialFromContext, refreshSubscription } = useSubscription();
-
-  const hasUnusedTrials = trialFeatures.some(
-    feature => trials[feature].remaining > 0
-  );
-
-  const allTrialsUsed = trialFeatures.every(
-    feature => trials[feature].remaining === 0
-  );
+  const { startTrial: startTrialFromContext, subscriptionStatus } = useSubscription();
 
   const getButtonText = (): string => {
     if (!user) return "Sign In to Start";
-    if (hasUnusedTrials) return "Start Free Trial";
-    if (allTrialsUsed) return "Upgrade Now";
-    return "Subscribe Now";
-  };
-
-  const getTrialDestination = (features: readonly TrialType[]): string => {
-    if (features.includes('creator')) return '/builder';
-    if (features.includes('reviewer')) return '/review';
-    if (features.includes('cover_letter')) return '/cover-letter';
-    return '/builder';
-  };
-
-  const getTrialSuccessMessage = (features: readonly TrialType[]): string => {
-    const featureMessages = features
-      .filter(feature => trials[feature].remaining > 0)
-      .map(feature => {
-        switch (feature) {
-          case 'creator': return 'create one resume';
-          case 'reviewer': return 'review one resume';
-          case 'cover_letter': return 'create one cover letter';
-          default: return '';
-        }
-      })
-      .filter(Boolean);
-
-    return `Trial started! You can now ${featureMessages.join(' and ')}.`;
+    if (!subscriptionStatus?.hasStartedTrial) return "Start Free Trial";
+    return "Upgrade Now";
   };
 
   const handleSubscribe = async () => {
@@ -92,23 +44,17 @@ export const PricingTier: React.FC<PricingTierProps> = ({
       return;
     }
 
-    // If trial is available and not used, start trial for all available features
-    if (hasUnusedTrials) {
+    // If trial hasn't been started yet
+    if (!subscriptionStatus?.hasStartedTrial) {
       try {
-        // Start trials for all unused features
-        for (const feature of trialFeatures) {
-          if (trials[feature].remaining > 0) {
-            await startTrialFromContext(feature);
-          }
-        }
+        // Start trial with the first feature, which will initialize all trials
+        await startTrialFromContext();
         
-        await refreshSubscription();
-        toast.success(getTrialSuccessMessage(trialFeatures));
-        navigate(getTrialDestination(trialFeatures));
+        toast.success("Trial started! You can now try all our features once - create a resume, get AI feedback, and generate a cover letter. Pick your preferred plan after trying everything!");
+        navigate('/builder'); 
         return;
       } catch (error) {
         console.error("Error starting trial:", error);
-        // If trial is already used, navigate to subscription confirmation
         if (error instanceof Error && error.message.includes('Trial already used')) {
           toast.info("Your trial has already been used. Let's get you upgraded!");
           navigate("/subscription-confirm", {
@@ -149,49 +95,42 @@ export const PricingTier: React.FC<PricingTierProps> = ({
         highlighted
           ? "border-2 border-primary bg-primary/5 shadow-lg relative"
           : "border border-border bg-white"
-      } flex flex-col h-full animate-fade-up`}
+      }`}
     >
       {highlighted && (
-        <Badge className="absolute -top-3 left-1/2 -translate-x-1/2" variant="secondary">
+        <Badge
+          className="absolute -top-3 left-1/2 transform -translate-x-1/2"
+          variant="default"
+        >
           Most Popular
         </Badge>
       )}
-      {hasUnusedTrials && (
-        <Badge className="absolute -top-3 right-4" variant="default">
-          Try Features Free
-        </Badge>
-      )}
-      {allTrialsUsed && (
-        <Badge className="absolute -top-3 right-4" variant="secondary">
-          Trial Used
-        </Badge>
-      )}
+
       <h3 className="text-2xl font-bold">{name}</h3>
-      <div className="mt-4 flex items-baseline">
-        <span className="text-4xl font-bold">{price}</span>
-        <span className="ml-2 text-gray-600">/month</span>
-      </div>
-      <p className="mt-4 text-gray-600">{description}</p>
-      <ul className="mt-6 space-y-4 flex-grow">
-        {features.map((feature, index) => (
-          <li key={index} className="flex items-center">
-            <Check className="h-5 w-5 text-primary mr-2 flex-shrink-0" />
+      <p className="text-3xl font-bold mt-4">{price}</p>
+      <p className="text-sm text-muted-foreground mt-2">per month</p>
+      <p className="mt-4 text-muted-foreground">{description}</p>
+
+      {trialDescription && (
+        <p className="mt-4 text-sm text-primary font-medium">{trialDescription}</p>
+      )}
+
+      <ul className="mt-8 space-y-4">
+        {features.map((feature) => (
+          <li key={feature} className="flex items-start">
+            <Check className="h-5 w-5 text-primary shrink-0 mr-2" />
             <span>{feature}</span>
           </li>
         ))}
       </ul>
-      <Button 
-        className="mt-8 w-full" 
+
+      <Button
+        className="w-full mt-8"
         onClick={handleSubscribe}
-        variant={allTrialsUsed ? "secondary" : "default"}
+        variant={highlighted ? "default" : "outline"}
       >
         {getButtonText()}
       </Button>
-      {hasUnusedTrials && (
-        <p className="mt-4 text-sm text-center text-gray-600">
-          One-time trial, no credit card required
-        </p>
-      )}
     </div>
   );
 };

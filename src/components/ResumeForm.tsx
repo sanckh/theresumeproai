@@ -10,7 +10,7 @@ import { Plus, Wand2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { enhanceWithAI } from "@/utils/openai";
 import { formatPhoneNumber } from "@/utils/formatters";
-import { decrementTrialUse, getSubscriptionStatus, startTrial } from "@/api/subscription";
+import { decrementTrialUse, getSubscriptionStatus } from "@/api/subscription";
 import { auth } from "@/config/firebase";
 import { useNavigate } from "react-router-dom";
 import {
@@ -159,10 +159,10 @@ export const ResumeForm = ({ onUpdate }: { onUpdate: (data: {
       console.log('Subscription status:', status);
       
       // Check if user has trial uses remaining or active subscription
-      const hasNoTrialLeft = status.status !== 'active' && (!status.trials.creator || status.trials.creator.remaining <= 0);
-      console.log('Has no trial left:', hasNoTrialLeft);
+      const hasNoAccess = status.hasStartedTrial && (!status.trials?.creator?.remaining || status.trials.creator.remaining <= 0);
+      console.log('Has no access:', hasNoAccess);
       
-      if (hasNoTrialLeft) {
+      if (hasNoAccess) {
         console.log('Setting showUpgradeDialog to true');
         setShowUpgradeDialog(true);
         return;
@@ -171,22 +171,15 @@ export const ResumeForm = ({ onUpdate }: { onUpdate: (data: {
       // Only set isEnhancing if we're actually going to enhance
       setIsEnhancing(true);
       
-      // If not on active subscription and trial hasn't been started, start it
-      if (status.status !== 'active' && !status.trials.creator.used) {
+      // If not on active subscription and has trial uses, decrement trial use
+      if (status.hasStartedTrial && status.trials.creator.remaining > 0) {
         try {
-          await startTrial(userId, 'creator');
+          await decrementTrialUse(userId);
         } catch (error) {
-          if (error instanceof Error && error.message.includes('Trial already used')) {
-            setShowUpgradeDialog(true);
-            return;
-          }
-          throw error; // Re-throw other errors to be caught by outer catch block
+          console.error('Error decrementing trial:', error);
+          setShowUpgradeDialog(true);
+          return;
         }
-      }
-      
-      // Decrement trial use if not on active subscription
-      if (status.status !== 'active') {
-        await decrementTrialUse(userId, 'creator');
       }
 
       const enhancedData = await enhanceWithAI(formData);

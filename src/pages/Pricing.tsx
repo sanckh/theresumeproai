@@ -2,50 +2,43 @@ import { Header } from "@/components/Header";
 import { PricingTier } from "@/components/pricing/PricingTier";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 
-const Pricing = () => {
-  const { tier: currentTier, subscriptionStatus } = useSubscription();
-  const defaultTrials = {
-    creator: { used: false, remaining: 1 },
-    reviewer: { used: false, remaining: 1 },
-    cover_letter: { used: false, remaining: 1 }
-  };
-  const trials = subscriptionStatus?.trials ?? defaultTrials;
-  
-  const tiers = [
+export function Pricing() {
+  const { subscriptionStatus } = useSubscription();
+
+  const pricingTiers = [
     {
       name: "Resume Creator",
-      price: "$7.99",
-      tier: "creator",
-      description: "Perfect for creating professional resumes",
+      price: "$4.99",
+      tier: "resume_creator",
+      description: "Perfect for creating your first resume",
       features: [
-        "Create one resume for free (trial)",
-        "10+ premium templates",
-        "AI-powered content suggestions",
-        "Advanced ATS optimization",
-        "Unlimited resume versions",
-        "Priority support",
+        "AI Resume Builder",
+        "Try all features once for free (trial)",
+        "Multiple resume templates",
+        "Export to PDF",
+        "ATS-friendly format",
+        "Real-time AI suggestions",
       ],
-      trialFeatures: ['creator'] as const,
-      trials,
-      trialDescription: "Start with one free resume",
+      trialFeatures: ['creator', 'reviewer', 'cover_letter'] as const,
+      trialDescription: "Try all features once for free",
     },
     {
       name: "Resume Pro",
-      price: "$11.99",
-      tier: "pro",
-      description: "Create and review resumes like a professional",
+      price: "$9.99",
+      tier: "resume_pro",
+      description: "Advanced resume building and review",
       features: [
         "Everything in Resume Creator",
-        "Create & review one resume for free (trial)",
-        "AI-powered resume analysis",
+        "Try all features once for free (trial)",
+        "AI Resume Review",
+        "Keyword optimization",
         "Detailed feedback",
         "Improvement suggestions",
         "Industry-specific tips",
       ],
       highlighted: true,
-      trialFeatures: ['creator', 'reviewer'] as const,
-      trials,
-      trialDescription: "Start with one free resume and review",
+      trialFeatures: ['creator', 'reviewer', 'cover_letter'] as const,
+      trialDescription: "Try all features once for free",
     },
     {
       name: "Career Pro",
@@ -61,7 +54,6 @@ const Pricing = () => {
         "Matching resume & cover letter designs",
       ],
       trialFeatures: ['creator', 'reviewer', 'cover_letter'] as const,
-      trials,
       trialDescription: "Try all features once for free",
     },
   ];
@@ -80,14 +72,14 @@ const Pricing = () => {
           {/* Debug information */}
           <div className="mt-4 p-4 bg-gray-100 rounded-lg text-left text-sm">
             <pre className="whitespace-pre-wrap">
-              Trial Status: {JSON.stringify(subscriptionStatus?.trials, null, 2)}
+              Has Started Trial: {JSON.stringify(subscriptionStatus?.hasStartedTrial, null, 2)}
             </pre>
           </div>
         </div>
 
         <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          {tiers.map((tier) => (
-            <PricingTier key={tier.name} {...tier} />
+          {pricingTiers.map((tier) => (
+            <PricingTier key={tier.tier} {...tier} />
           ))}
         </div>
 
@@ -103,6 +95,6 @@ const Pricing = () => {
       </main>
     </div>
   );
-};
+}
 
 export default Pricing;

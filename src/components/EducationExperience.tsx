@@ -1,8 +1,8 @@
+import { EducationEntry } from "@/api/resume";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { X } from "lucide-react";
-import { EducationEntry } from "../utils/database";
 
 interface EducationExperienceProps {
   index: number;
