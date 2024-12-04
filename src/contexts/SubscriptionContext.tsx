@@ -77,9 +77,30 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     if (!subscriptionStatus) return false;
 
     const { tier, isActive, hasStartedTrial, trials } = subscriptionStatus;
+    
+    console.log('Checking feature access:', {
+      feature,
+      tier,
+      isActive,
+      hasStartedTrial,
+      trials,
+    });
 
-    // If user has an active subscription, check tier permissions
-    if (isActive === true) {
+    // First check if user has remaining trial uses
+    if (hasStartedTrial && trials) {
+      const featureKey = feature as keyof typeof trials;
+      console.log('Trial check:', {
+        featureKey,
+        remainingUses: trials[featureKey]?.remaining
+      });
+      if (trials[featureKey]?.remaining > 0) {
+        return true;
+      }
+    }
+
+    // If no trial uses left or not on trial, check subscription
+    console.log('Subscription check:', { tier, feature, isActive });
+    if (isActive) {
       switch (tier) {
         case SubscriptionTier.CAREER_PRO:
           return true;
@@ -90,12 +111,6 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
         default:
           return false;
       }
-    }
-
-    // If user is on trial, check remaining uses for the specific feature
-    if (hasStartedTrial && trials) {
-      const featureKey = feature as keyof typeof trials;
-      return trials[featureKey]?.remaining > 0;
     }
 
     return false;

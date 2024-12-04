@@ -8,7 +8,7 @@ export enum SubscriptionTier {
 
 export interface SubscriptionStatus {
   tier: SubscriptionTier;
-  status: 'active' | 'inactive' | 'expired';
+  isActive: boolean;
   subscription_end_date?: string | null;
   hasStartedTrial: boolean;
   trials: {

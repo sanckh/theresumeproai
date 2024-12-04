@@ -25,7 +25,7 @@ export async function getUserSubscriptionStatus(userId: string): Promise<Subscri
     const trialData = trialDoc.data();
     return {
       tier: SubscriptionTier.RESUME_CREATOR,
-      status: 'active', 
+      isActive: true,
       hasStartedTrial: true,
       trials: {
         creator: { remaining: trialData?.creator?.remainingUses ?? 1 },
@@ -38,9 +38,10 @@ export async function getUserSubscriptionStatus(userId: string): Promise<Subscri
   // If user has a paid subscription
   if (userDoc.exists) {
     const userData = userDoc.data();
+    const isActive = userData?.status === 'active' || userData?.isActive === true;
     return {
       tier: userData?.tier || SubscriptionTier.NONE,
-      status: userData?.status || 'inactive',
+      isActive,
       subscription_end_date: userData?.subscription_end_date,
       hasStartedTrial: true,
       trials: {
@@ -54,7 +55,7 @@ export async function getUserSubscriptionStatus(userId: string): Promise<Subscri
   // New user with no trial or subscription
   return {
     tier: SubscriptionTier.NONE,
-    status: 'inactive',
+    isActive: false,
     hasStartedTrial: false,
     trials: {
       creator: { remaining: 0 },
@@ -70,7 +71,7 @@ export async function createSubscription(
 ): Promise<SubscriptionStatus> {
   await db.collection('subscriptions').doc(userId).set({
     tier: data.tier,
-    status: 'active',
+    isActive: true,
     subscription_end_date: data.subscription_end_date,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
@@ -131,7 +132,7 @@ export async function decrementTrialUse(
 
 export async function cancelSubscription(userId: string): Promise<SubscriptionStatus> {
   await db.collection('subscriptions').doc(userId).update({
-    status: 'inactive',
+    isActive: false,
     updated_at: new Date().toISOString()
   });
 

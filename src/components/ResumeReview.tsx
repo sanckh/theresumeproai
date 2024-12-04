@@ -125,12 +125,27 @@ export const ResumeReview = () => {
         return;
       }
 
-      // Only decrement trial use if this is a trial
-      if (subscriptionStatus?.hasStartedTrial) {
-        await decrementTrialUse(userId, 'reviewer');
+      // Only decrement trial use if this is a trial and has remaining uses
+      if (subscriptionStatus?.hasStartedTrial && subscriptionStatus.trials.reviewer.remaining > 0) {
+        try {
+          await decrementTrialUse(userId, 'reviewer');
+          // Continue with analysis after successful decrement
+          refetch();
+        } catch (error) {
+          if (error instanceof Error && error.message.includes('No remaining trial uses')) {
+            setShowUpgradeDialog(true);
+            return;
+          }
+          throw error;
+        }
+      } else if (subscriptionStatus?.hasStartedTrial) {
+        // Trial started but no remaining uses
+        setShowUpgradeDialog(true);
+        return;
+      } else {
+        // Not a trial, must be a paid subscription
+        refetch();
       }
-
-      refetch();
     } catch (error) {
       console.error("Error analyzing resume:", error);
       toast.error("Failed to analyze resume. Please try again.");
