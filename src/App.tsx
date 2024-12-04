@@ -13,6 +13,7 @@ import Templates from "./pages/Templates";
 import History from "./pages/History";
 import Success from "./pages/Success";
 import SubscriptionConfirm from "./pages/SubscriptionConfirm";
+import Settings from "./pages/Settings"; // Added import statement
 
 const queryClient = new QueryClient();
 
@@ -33,6 +34,7 @@ const App = () => (
               <Route path="/history" element={<History />} />
               <Route path="/success" element={<Success />} />
               <Route path="/subscription-confirm" element={<SubscriptionConfirm />} />
+              <Route path="/settings" element={<Settings />} /> // Added new route
             </Routes>
           </BrowserRouter>
         </TooltipProvider>

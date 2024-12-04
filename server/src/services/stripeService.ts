@@ -86,7 +86,12 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
     return {
       tier: SubscriptionTier.RESUME_CREATOR,
       status: 'inactive',
-      hasStartedTrial: false
+      hasStartedTrial: false,
+      trials: {
+        creator: { remaining: 0 },
+        reviewer: { remaining: 0 },
+        cover_letter: { remaining: 0 }
+      }
     };
   }
 
@@ -95,7 +100,12 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
     tier: data?.tier || SubscriptionTier.RESUME_CREATOR,
     status: data?.status || 'inactive',
     subscription_end_date: data?.subscription_end_date,
-    hasStartedTrial: data?.hasStartedTrial || false
+    hasStartedTrial: data?.hasStartedTrial || false,
+    trials: {
+      creator: { remaining: data?.creator?.remaining || 0 },
+      reviewer: { remaining: data?.reviewer?.remaining || 0 },
+      cover_letter: { remaining: data?.cover_letter?.remaining || 0 }
+    }
   };
 }
 

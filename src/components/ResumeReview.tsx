@@ -118,20 +118,16 @@ export const ResumeReview = () => {
         toast.error("Please sign in to use resume review");
         return;
       }
-      
-      const status = await getSubscriptionStatus(userId);
-      console.log('Got subscription status:', status);
-      
-      // If status is active (either paid subscription or valid trial), allow access
-      if (status.isActive) {
-        console.log('Setting showUpgradeDialog to true - no active subscription or trial');
+
+      // Check if user can use the reviewer feature
+      if (!canUseFeature('reviewer')) {
         setShowUpgradeDialog(true);
         return;
       }
 
       // Only decrement trial use if this is a trial
-      if (status.hasStartedTrial) {
-        await decrementTrialUse(userId);
+      if (subscriptionStatus?.hasStartedTrial) {
+        await decrementTrialUse(userId, 'reviewer');
       }
 
       refetch();

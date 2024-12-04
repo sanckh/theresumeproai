@@ -16,7 +16,7 @@ const defaultTrials = {
   cover_letter: { used: false, remaining: 1 }
 };
 
-export async function getSubscriptionStatus(userId: string): Promise<SubscriptionStatus> {
+export async function getUserSubscriptionStatus(userId: string): Promise<SubscriptionStatus> {
   const userDoc = await db.collection('subscriptions').doc(userId).get();
   const trialDoc = await db.collection('trials').doc(userId).get();
 
@@ -28,9 +28,9 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
       status: 'active', 
       hasStartedTrial: true,
       trials: {
-        creator: { remaining: trialData?.creator?.remainingUses || 0 },
-        reviewer: { remaining: trialData?.reviewer?.remainingUses || 0 },
-        cover_letter: { remaining: trialData?.cover_letter?.remainingUses || 0 }
+        creator: { remaining: trialData?.creator?.remainingUses ?? 1 },
+        reviewer: { remaining: trialData?.reviewer?.remainingUses ?? 1 },
+        cover_letter: { remaining: trialData?.cover_letter?.remainingUses ?? 1 }
       }
     };
   }
@@ -76,7 +76,7 @@ export async function createSubscription(
     updated_at: new Date().toISOString()
   });
 
-  return getSubscriptionStatus(userId);
+  return getUserSubscriptionStatus(userId);
 }
 
 export async function startTrial(
@@ -96,11 +96,12 @@ export async function startTrial(
     cover_letter: { remainingUses: 1, started_at: new Date().toISOString() }
   });
 
-  return getSubscriptionStatus(userId);
+  return getUserSubscriptionStatus(userId);
 }
 
 export async function decrementTrialUse(
   userId: string,
+  feature: 'creator' | 'reviewer' | 'cover_letter'
 ): Promise<SubscriptionStatus> {
   const trialRef = db.collection('trials').doc(userId);
   const trialDoc = await trialRef.get();
@@ -114,19 +115,18 @@ export async function decrementTrialUse(
     throw new Error('No trial data found');
   }
 
-  const features = ['creator', 'reviewer', 'cover_letter'];
-  
-  // Update all features that have remaining uses
-  for (const feature of features) {
-    if (trialData[feature]?.remainingUses > 0) {
-      await trialRef.update({
-        [`${feature}.remainingUses`]: trialData[feature].remainingUses - 1,
-        [`${feature}.last_used`]: new Date().toISOString()
-      });
-    }
+  // Check if the feature exists and has remaining uses
+  if (!trialData[feature] || trialData[feature].remainingUses <= 0) {
+    throw new Error('No remaining trial uses for this feature');
   }
 
-  return getSubscriptionStatus(userId);
+  // Only decrement the specific feature being used
+  await trialRef.update({
+    [`${feature}.remainingUses`]: trialData[feature].remainingUses - 1,
+    [`${feature}.last_used`]: new Date().toISOString()
+  });
+
+  return getUserSubscriptionStatus(userId);
 }
 
 export async function cancelSubscription(userId: string): Promise<SubscriptionStatus> {
@@ -135,5 +135,5 @@ export async function cancelSubscription(userId: string): Promise<SubscriptionSt
     updated_at: new Date().toISOString()
   });
 
-  return getSubscriptionStatus(userId);
+  return getUserSubscriptionStatus(userId);
 }

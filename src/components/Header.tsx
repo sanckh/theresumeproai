@@ -1,6 +1,7 @@
 import { Button } from "./ui/button";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +13,8 @@ import { toast } from "sonner";
 
 export const Header = () => {
   const { user, signOut } = useAuth();
+  const { canUseFeature } = useSubscription();
+  const navigate = useNavigate();
 
   const handleSignOut = async () => {
     try {
@@ -20,6 +23,15 @@ export const Header = () => {
     } catch (error) {
       toast.error("Error signing out");
     }
+  };
+
+  const handleBuildResume = () => {
+    if (!canUseFeature('creator')) {
+      toast.error("You need a subscription to build resumes. Start with a free trial!");
+      navigate('/pricing');
+      return;
+    }
+    navigate('/builder');
   };
 
   return (
@@ -39,8 +51,8 @@ export const Header = () => {
           </Button>
           {user ? (
             <>
-              <Button asChild>
-                <Link to="/builder">Build Resume</Link>
+              <Button onClick={handleBuildResume}>
+                Build Resume
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -50,7 +62,10 @@ export const Header = () => {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem asChild>
-                    <Link to="/history">History</Link>
+                    <Link to="/settings">Settings</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem disabled>
+                    History (coming soon)
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleSignOut}>
                     Sign Out

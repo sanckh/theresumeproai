@@ -6,7 +6,7 @@ import { SubscriptionTier } from '../../types/subscription';
 export async function getSubscriptionStatus(req: AuthenticatedRequest, res: Response) {
   try {
     const userId = req.user!.uid;
-    const subscription = await subscriptionService.getSubscriptionStatus(userId);
+    const subscription = await subscriptionService.getUserSubscriptionStatus(userId);
     res.json({ subscription });
   } catch (error) {
     console.error('Error getting subscription status:', error);
@@ -53,7 +53,13 @@ export async function startTrial(req: AuthenticatedRequest, res: Response) {
 export async function decrementTrialUse(req: AuthenticatedRequest, res: Response) {
   try {
     const userId = req.user!.uid;
-    const subscription = await subscriptionService.decrementTrialUse(userId);
+    const { feature } = req.body;
+
+    if (!feature || !['creator', 'reviewer', 'cover_letter'].includes(feature)) {
+      return res.status(400).json({ error: 'Invalid feature specified' });
+    }
+
+    const subscription = await subscriptionService.decrementTrialUse(userId, feature);
     res.json({ subscription });
   } catch (error) {
     console.error('Error decrementing trial use:', error);

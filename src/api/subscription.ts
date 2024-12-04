@@ -37,7 +37,9 @@ export const getSubscriptionStatus = async (userId: string): Promise<Subscriptio
     if (!response.ok) {
       throw new Error('Failed to get subscription status');
     }
-    return response.json();
+    const data = await response.json();
+    console.log("Got subscription status:", data);
+    return data.subscription;
   } catch (error) {
     console.error('Error getting subscription status:', error);
     throw error;
@@ -55,25 +57,30 @@ export const startTrial = async (userId: string): Promise<SubscriptionStatus> =>
     if (!response.ok) {
       throw new Error('Failed to start trial');
     }
-    return response.json();
+    const data = await response.json();
+    return data.subscription;
   } catch (error) {
     console.error('Error starting trial:', error);
     throw error;
   }
 };
 
-export const decrementTrialUse = async (userId: string): Promise<SubscriptionStatus> => {
+export const decrementTrialUse = async (
+  userId: string,
+  feature: 'creator' | 'reviewer' | 'cover_letter'
+): Promise<SubscriptionStatus> => {
   try {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_URL}/subscription/trial/decrement`, {
+    const response = await fetch(`${API_URL}/subscription/trial/use`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ userId })
+      body: JSON.stringify({ userId, feature })
     });
     if (!response.ok) {
       throw new Error('Failed to decrement trial use');
     }
-    return response.json();
+    const data = await response.json();
+    return data.subscription;
   } catch (error) {
     console.error('Error decrementing trial use:', error);
     throw error;
@@ -95,7 +102,8 @@ export const createSubscription = async (
     if (!response.ok) {
       throw new Error('Failed to create subscription');
     }
-    return response.json();
+    const data = await response.json();
+    return data.subscription;
   } catch (error) {
     console.error('Error creating subscription:', error);
     throw error;
@@ -113,7 +121,8 @@ export const cancelSubscription = async (userId: string): Promise<SubscriptionSt
     if (!response.ok) {
       throw new Error('Failed to cancel subscription');
     }
-    return response.json();
+    const data = await response.json();
+    return data.subscription;
   } catch (error) {
     console.error('Error canceling subscription:', error);
     throw error;

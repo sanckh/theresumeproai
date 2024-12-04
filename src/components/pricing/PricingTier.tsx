@@ -29,7 +29,7 @@ export const PricingTier: React.FC<PricingTierProps> = ({
 }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { startTrial: startTrialFromContext, subscriptionStatus } = useSubscription();
+  const { startTrial: startTrialFromContext, subscriptionStatus, refreshSubscription } = useSubscription();
 
   const getButtonText = (): string => {
     if (!user) return "Sign In to Start";
@@ -49,6 +49,9 @@ export const PricingTier: React.FC<PricingTierProps> = ({
       try {
         // Start trial with the first feature, which will initialize all trials
         await startTrialFromContext();
+        
+        // Refresh the subscription status to get the updated hasStartedTrial value
+        await refreshSubscription();
         
         toast.success("Trial started! You can now try all our features once - create a resume, get AI feedback, and generate a cover letter. Pick your preferred plan after trying everything!");
         navigate('/builder'); 

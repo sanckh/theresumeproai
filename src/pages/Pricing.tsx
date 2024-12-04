@@ -8,7 +8,7 @@ export function Pricing() {
   const pricingTiers = [
     {
       name: "Resume Creator",
-      price: "$4.99",
+      price: "$7.99",
       tier: "resume_creator",
       description: "Perfect for creating your first resume",
       features: [
@@ -24,7 +24,7 @@ export function Pricing() {
     },
     {
       name: "Resume Pro",
-      price: "$9.99",
+      price: "$11.99",
       tier: "resume_pro",
       description: "Advanced resume building and review",
       features: [

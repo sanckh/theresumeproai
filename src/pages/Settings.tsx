@@ -1,0 +1,105 @@
+import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/contexts/SubscriptionContext";
+import { Card } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Header } from "@/components/Header";
+import { CreditCard, User } from "lucide-react";
+
+const Settings = () => {
+  const { user } = useAuth();
+  const { subscriptionStatus } = useSubscription();
+
+  if (!user) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card className="p-6 text-center">
+          <h2 className="text-xl font-semibold mb-2">Please Sign In</h2>
+          <p className="text-gray-600">Sign in to view your settings</p>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <Header />
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-8">Settings</h1>
+
+        <Tabs defaultValue="profile" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="profile" className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              Profile
+            </TabsTrigger>
+            <TabsTrigger value="subscription" className="flex items-center gap-2">
+              <CreditCard className="h-4 w-4" />
+              Subscription
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="profile">
+            <Card className="p-6">
+              <h2 className="text-xl font-semibold mb-4">Profile Settings</h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Email</label>
+                  <p className="text-gray-600">{user.email}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Account Created</label>
+                  <p className="text-gray-600">
+                    {new Date(user.metadata.creationTime).toLocaleDateString()}
+                  </p>
+                </div>
+                <div className="pt-4">
+                  <Button variant="destructive">Delete Account</Button>
+                </div>
+              </div>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="subscription">
+            <Card className="p-6">
+              <h2 className="text-xl font-semibold mb-4">Subscription Settings</h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Current Plan</label>
+                  <p className="text-gray-600">{subscriptionStatus?.tier || "Free"}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Trial Status</label>
+                  <p className="text-gray-600">
+                    {subscriptionStatus?.hasStartedTrial ? "Trial Used" : "Trial Available"}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Trial Uses Remaining</label>
+                  <div className="space-y-2">
+                    <p className="text-gray-600">
+                      Resume Creator: {subscriptionStatus?.trials.creator.remaining || 0}
+                    </p>
+                    <p className="text-gray-600">
+                      Resume Reviewer: {subscriptionStatus?.trials.reviewer.remaining || 0}
+                    </p>
+                    <p className="text-gray-600">
+                      Cover Letter: {subscriptionStatus?.trials.cover_letter.remaining || 0}
+                    </p>
+                  </div>
+                </div>
+                <div className="pt-4">
+                  <Button asChild>
+                    <a href="/pricing">Manage Subscription</a>
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  );
+};
+
+export default Settings;

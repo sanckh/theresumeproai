@@ -10,7 +10,7 @@ import { Plus, Wand2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { enhanceWithAI } from "@/utils/openai";
 import { formatPhoneNumber } from "@/utils/formatters";
-import { decrementTrialUse, getSubscriptionStatus } from "@/api/subscription";
+import { decrementTrialUse } from "@/api/subscription";
 import { auth } from "@/config/firebase";
 import { useNavigate } from "react-router-dom";
 import {
@@ -21,6 +21,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { useSubscription } from "@/contexts/SubscriptionContext";
 
 export const ResumeForm = ({ onUpdate }: { onUpdate: (data: {
   fullName: string;
@@ -43,6 +44,8 @@ export const ResumeForm = ({ onUpdate }: { onUpdate: (data: {
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const navigate = useNavigate();
+  const { canUseFeature, subscriptionStatus } = useSubscription();
+  const canReview = canUseFeature('creator');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -148,22 +151,14 @@ export const ResumeForm = ({ onUpdate }: { onUpdate: (data: {
 
   const handleEnhanceWithAI = async () => {
     try {
-      // Check subscription status first, before setting isEnhancing
       const userId = auth.currentUser?.uid;
       if (!userId) {
         toast.error("Please sign in to use AI enhancement");
         return;
       }
-      
-      const status = await getSubscriptionStatus(userId);
-      console.log('Subscription status:', status);
-      
-      // Check if user has trial uses remaining or active subscription
-      const hasNoAccess = status.hasStartedTrial && (!status.trials?.creator?.remaining || status.trials.creator.remaining <= 0);
-      console.log('Has no access:', hasNoAccess);
-      
-      if (hasNoAccess) {
-        console.log('Setting showUpgradeDialog to true');
+
+      // Check if user can use the creator feature
+      if (!canUseFeature('creator')) {
         setShowUpgradeDialog(true);
         return;
       }
@@ -171,13 +166,14 @@ export const ResumeForm = ({ onUpdate }: { onUpdate: (data: {
       // Only set isEnhancing if we're actually going to enhance
       setIsEnhancing(true);
       
-      // If not on active subscription and has trial uses, decrement trial use
-      if (status.hasStartedTrial && status.trials.creator.remaining > 0) {
+      // Only decrement trial use if this is a trial
+      if (subscriptionStatus?.hasStartedTrial) {
         try {
-          await decrementTrialUse(userId);
+          await decrementTrialUse(userId, 'creator');
         } catch (error) {
           console.error('Error decrementing trial:', error);
           setShowUpgradeDialog(true);
+          setIsEnhancing(false);
           return;
         }
       }
