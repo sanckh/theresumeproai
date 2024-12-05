@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+import { useSubscription } from "../contexts/SubscriptionContext";
+import { toast } from "sonner";
+import { STRIPE_CONFIG } from "../config/stripe";
+import { SubscriptionTier } from "../enums/subscriptionEnum";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { useAuth } from "@/contexts/AuthContext";
-import { useSubscription } from "@/contexts/SubscriptionContext";
-import { toast } from "sonner";
 import { Check, X } from "lucide-react";
 
 interface LocationState {
@@ -45,28 +47,26 @@ const SubscriptionConfirm = () => {
 
     setIsProcessing(true);
     try {
-      const response = await fetch("/api/subscription/create", {
+      const response = await fetch("/api/stripe/create-checkout-session", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           userId: user.uid,
-          tier: selectedTier.name.toLowerCase().includes("pro") ? "pro" : "premium",
-          duration: 1, // 1 month subscription
+          priceId: STRIPE_CONFIG.priceIds[selectedTier.name as SubscriptionTier],
         }),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to create subscription");
+        throw new Error("Failed to create checkout session");
       }
 
-      await checkSubscription();
-      toast.success("Subscription activated successfully!");
-      navigate("/builder");
+      const { url } = await response.json();
+      window.location.href = url;
     } catch (error) {
-      console.error("Error creating subscription:", error);
-      toast.error("Failed to activate subscription. Please try again.");
+      console.error("Error creating checkout session:", error);
+      toast.error("Failed to start checkout process. Please try again.");
     } finally {
       setIsProcessing(false);
     }

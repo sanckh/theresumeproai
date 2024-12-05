@@ -30,7 +30,7 @@ const Index = () => {
       <main className="container mx-auto px-4 py-16">
         <div className="text-center max-w-3xl mx-auto">
           <Badge variant="secondary" className="mb-4">
-            Starting at $9.99/month
+            Starting at $7.99/month
           </Badge>
           <h1 className="text-5xl font-bold mb-6">
             Create Your Professional Resume with{" "}

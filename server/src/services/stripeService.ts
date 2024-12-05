@@ -5,9 +5,9 @@ import { collection, doc, getDoc, getDocs, query, setDoc, where } from 'firebase
 import { logToFirestore } from './logs_service';
 import { SubscriptionStatus, SubscriptionTier } from '../../types/subscription';
 
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2024-08-27',
-  
+// Initialize Stripe with the secret key from environment variables
+const stripe = new Stripe(process.env.STRIPE_API_KEY!, {
+  apiVersion: '2023-10-16', // Use the latest API version
 });
 
 export async function createCheckoutSession(priceId: string, userId: string): Promise<string> {
