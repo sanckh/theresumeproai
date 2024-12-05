@@ -4,10 +4,11 @@ import { db } from '../../firebase_options';
 import { collection, doc, getDoc, getDocs, query, setDoc, where } from 'firebase/firestore';
 import { logToFirestore } from './logs_service';
 import { SubscriptionStatus, SubscriptionTier } from '../../types/subscription';
+import { getTierFromPriceId } from '../../../src/config/stripe';
 
 // Initialize Stripe with the secret key from environment variables
 const stripe = new Stripe(process.env.STRIPE_API_KEY!, {
-  apiVersion: '2023-10-16', // Use the latest API version
+  apiVersion: '2022-11-15',
 });
 
 export async function createCheckoutSession(priceId: string, userId: string): Promise<string> {
@@ -85,7 +86,7 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
   if (!userDoc.exists) {
     return {
       tier: SubscriptionTier.RESUME_CREATOR,
-      status: 'inactive',
+      isActive: false,
       hasStartedTrial: false,
       trials: {
         creator: { remaining: 0 },
@@ -98,7 +99,7 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
   const data = userDoc.data();
   return {
     tier: data?.tier || SubscriptionTier.RESUME_CREATOR,
-    status: data?.status || 'inactive',
+    isActive: data?.status === 'active' || data?.isActive === true,
     subscription_end_date: data?.subscription_end_date,
     hasStartedTrial: data?.hasStartedTrial || false,
     trials: {
@@ -144,13 +145,13 @@ async function updateSubscriptionInFirestore(
   priceId: string | null
 ): Promise<void> {
   const data = subscription ? {
-    tier: priceId === 'price_premium_creator' ? 'premium_creator' : 'premium_reviewer',
+    tier: getTierFromPriceId(priceId),
     status: subscription.status,
     stripeSubscriptionId: subscription.id,
     stripeCustomerId: subscription.customer,
     updated_at: new Date().toISOString(),
   } : {
-    tier: 'free',
+    tier: SubscriptionTier.FREE,
     status: 'cancelled',
     stripeSubscriptionId: null,
     updated_at: new Date().toISOString(),
