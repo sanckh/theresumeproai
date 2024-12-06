@@ -4,10 +4,10 @@ import { db } from '../../firebase_options';
 import { collection, doc, getDoc, getDocs, query, setDoc, where } from 'firebase/firestore';
 import { logToFirestore } from './logs_service';
 import { SubscriptionStatus, SubscriptionTier } from '../../types/subscription';
-import { getTierFromPriceId } from '../../../src/config/stripe';
+import { STRIPE_CONFIG } from '../config/stripe';
+import { getTierFromPriceId } from '../config/stripe';
 
-// Initialize Stripe with the secret key from environment variables
-const stripe = new Stripe(process.env.STRIPE_API_KEY!, {
+const stripe = new Stripe(STRIPE_CONFIG.STRIPE_API_KEY!, {
   apiVersion: '2022-11-15',
 });
 
@@ -16,8 +16,8 @@ export async function createCheckoutSession(priceId: string, userId: string): Pr
     mode: 'subscription',
     payment_method_types: ['card'],
     line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${process.env.FRONTEND_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${process.env.FRONTEND_URL}/pricing`,
+    success_url: `${STRIPE_CONFIG.FRONTEND_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${STRIPE_CONFIG.FRONTEND_URL}/pricing`,
     client_reference_id: userId,
     metadata: {
       userId,
@@ -31,20 +31,27 @@ export function constructWebhookEvent(payload: string | Buffer, signature: strin
   return stripe.webhooks.constructEvent(
     payload,
     signature,
-    process.env.STRIPE_WEBHOOK_SECRET!
+    STRIPE_CONFIG.STRIPE_WEBHOOK_SECRET!
   );
 }
 
-export async function handleWebhook(payload: string | Buffer, signature: string): Promise<void> {
+export async function handleWebhook(payload: string | Buffer, signature: string): Promise<Stripe.Event> {
+  console.log('Received Stripe webhook event');
   const event = constructWebhookEvent(payload, signature);
 
+  console.log('Processing webhook event type:', event.type);
+  
   switch (event.type) {
     case 'checkout.session.completed':
+      console.log('Checkout session completed, processing...');
       await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
+      console.log('Checkout session processed successfully');
       break;
     case 'customer.subscription.updated':
     case 'customer.subscription.deleted':
+      console.log('Subscription update event, processing...');
       await handleSubscriptionUpdate(event.data.object as Stripe.Subscription);
+      console.log('Subscription update processed successfully');
       break;
     default:
       await logToFirestore({
@@ -54,6 +61,7 @@ export async function handleWebhook(payload: string | Buffer, signature: string)
         timestamp: new Date().toISOString(),
       });
   }
+  return event;
 }
 
 export async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session): Promise<void> {

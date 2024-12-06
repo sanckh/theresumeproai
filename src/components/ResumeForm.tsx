@@ -163,20 +163,24 @@ export const ResumeForm = ({ onUpdate }: { onUpdate: (data: {
         return;
       }
 
-      // Only set isEnhancing if we're actually going to enhance
-      setIsEnhancing(true);
-      
-      // Only decrement trial use if this is a trial
+      // Check trial status before attempting to decrement
       if (subscriptionStatus?.hasStartedTrial) {
+        if (subscriptionStatus.trials.creator.remaining <= 0) {
+          setShowUpgradeDialog(true);
+          return;
+        }
+
         try {
           await decrementTrialUse(userId, 'creator');
         } catch (error) {
           console.error('Error decrementing trial:', error);
           setShowUpgradeDialog(true);
-          setIsEnhancing(false);
           return;
         }
       }
+
+      // Only set isEnhancing after all checks pass
+      setIsEnhancing(true);
 
       const enhancedData = await enhanceWithAI(formData);
       setFormData(enhancedData);

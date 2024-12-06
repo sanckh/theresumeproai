@@ -1,7 +1,8 @@
-import { Response } from 'express';
+import { Response, Request, request } from 'express';
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
 import * as subscriptionService from '../services/subscriptionService';
 import { SubscriptionTier } from '../../types/subscription';
+import { handleWebhook } from '../services/stripeService';
 
 export async function getSubscriptionStatus(req: AuthenticatedRequest, res: Response) {
   try {
@@ -77,3 +78,21 @@ export async function cancelSubscription(req: AuthenticatedRequest, res: Respons
     res.status(500).json({ error: 'Failed to cancel subscription' });
   }
 }
+
+export const handleStripeWebhook = async (req: Request, res: Response) => {
+  try {
+    const sig = req.headers['stripe-signature'];
+    if (typeof sig !== 'string') {
+      return res.status(400).json({ error: 'Invalid stripe-signature header' });
+    }
+    if (typeof sig === 'string') {
+      await handleWebhook(req.body, sig);
+    } else {
+      return res.status(400).json({ error: 'Invalid stripe-signature header' });
+    }
+    res.status(200).json({ received: true });
+  } catch (error) {
+    console.error('Error handling webhook:', error);
+    res.status(400).json({ error: 'Webhook error' });
+  }
+};

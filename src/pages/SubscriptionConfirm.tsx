@@ -3,12 +3,14 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useSubscription } from "../contexts/SubscriptionContext";
 import { toast } from "sonner";
-import { STRIPE_CONFIG } from "../config/stripe";
-import { SubscriptionTier } from "../enums/subscriptionEnum";
+import { STRIPE_PRICE_IDS } from "../config/stripeClient";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Check, X } from "lucide-react";
+import { createCheckoutSession } from "@/api/stripe";
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 interface LocationState {
   tier: {
@@ -47,23 +49,19 @@ const SubscriptionConfirm = () => {
 
     setIsProcessing(true);
     try {
-      const response = await fetch("/api/stripe/create-checkout-session", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId: user.uid,
-          priceId: STRIPE_CONFIG.priceIds[selectedTier.name as SubscriptionTier],
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to create checkout session");
+      // Convert tier name to match STRIPE_PRICE_IDS format (e.g., "Resume Pro" -> "RESUME_PRO")
+      const priceIdKey = selectedTier.name.toUpperCase().replace(/\s+/g, '_') as keyof typeof STRIPE_PRICE_IDS;
+      console.log('Selected tier:', selectedTier.name);
+      console.log('Price ID key:', priceIdKey);
+      const priceId = STRIPE_PRICE_IDS[priceIdKey];
+      console.log('Price ID:', priceId);
+      
+      if (!priceId) {
+        throw new Error(`No price ID found for tier: ${selectedTier.name}`);
       }
-
-      const { url } = await response.json();
-      window.location.href = url;
+      
+      const checkoutUrl = await createCheckoutSession(user.uid, priceId);
+      window.location.href = checkoutUrl;
     } catch (error) {
       console.error("Error creating checkout session:", error);
       toast.error("Failed to start checkout process. Please try again.");

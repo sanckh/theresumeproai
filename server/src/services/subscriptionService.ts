@@ -16,34 +16,19 @@ const defaultTrials = {
   cover_letter: { used: false, remaining: 1 }
 };
 
-export async function getUserSubscriptionStatus(userId: string): Promise<SubscriptionStatus> {
-  const userDoc = await db.collection('subscriptions').doc(userId).get();
+async function getTrialStatus(userId: string): Promise<{
+  hasStartedTrial: boolean;
+  trials: {
+    creator: { remaining: number };
+    reviewer: { remaining: number };
+    cover_letter: { remaining: number };
+  }
+}> {
   const trialDoc = await db.collection('trials').doc(userId).get();
 
-  // If user has a trial record, they have access to all features
-  if (trialDoc.exists) {
-    const trialData = trialDoc.data();
+  if (!trialDoc.exists) {
     return {
-      tier: SubscriptionTier.RESUME_CREATOR,
-      isActive: true,
-      hasStartedTrial: true,
-      trials: {
-        creator: { remaining: trialData?.creator?.remainingUses ?? 1 },
-        reviewer: { remaining: trialData?.reviewer?.remainingUses ?? 1 },
-        cover_letter: { remaining: trialData?.cover_letter?.remainingUses ?? 1 }
-      }
-    };
-  }
-
-  // If user has a paid subscription
-  if (userDoc.exists) {
-    const userData = userDoc.data();
-    const isActive = userData?.status === 'active' || userData?.isActive === true;
-    return {
-      tier: userData?.tier || SubscriptionTier.NONE,
-      isActive,
-      subscription_end_date: userData?.subscription_end_date,
-      hasStartedTrial: true,
+      hasStartedTrial: false,
       trials: {
         creator: { remaining: 0 },
         reviewer: { remaining: 0 },
@@ -52,16 +37,62 @@ export async function getUserSubscriptionStatus(userId: string): Promise<Subscri
     };
   }
 
-  // New user with no trial or subscription
+  const trialData = trialDoc.data();
   return {
-    tier: SubscriptionTier.NONE,
-    isActive: false,
-    hasStartedTrial: false,
+    hasStartedTrial: true,
     trials: {
-      creator: { remaining: 0 },
-      reviewer: { remaining: 0 },
-      cover_letter: { remaining: 0 }
+      creator: { remaining: trialData?.creator?.remainingUses ?? 1 },
+      reviewer: { remaining: trialData?.reviewer?.remainingUses ?? 1 },
+      cover_letter: { remaining: trialData?.cover_letter?.remainingUses ?? 1 }
     }
+  };
+}
+
+async function getPaidSubscriptionStatus(userId: string): Promise<{
+  tier: SubscriptionTier;
+  isActive: boolean;
+  subscription_end_date?: string | null;
+}> {
+  const userDoc = await db.collection('subscriptions').doc(userId).get();
+
+  if (!userDoc.exists) {
+    return {
+      tier: SubscriptionTier.NONE,
+      isActive: false
+    };
+  }
+
+  const userData = userDoc.data();
+  const isActive = userData?.status === 'active' || userData?.isActive === true;
+  
+  return {
+    tier: userData?.tier || SubscriptionTier.NONE,
+    isActive,
+    subscription_end_date: userData?.subscription_end_date
+  };
+}
+
+export async function getUserSubscriptionStatus(userId: string): Promise<SubscriptionStatus> {
+  const [trialStatus, subscriptionStatus] = await Promise.all([
+    getTrialStatus(userId),
+    getPaidSubscriptionStatus(userId)
+  ]);
+
+  // If user has an active trial, they get trial tier access regardless of subscription
+  if (trialStatus.trials.creator.remaining > 0) {
+    return {
+      tier: SubscriptionTier.RESUME_CREATOR,
+      isActive: true,
+      hasStartedTrial: trialStatus.hasStartedTrial,
+      trials: trialStatus.trials
+    };
+  }
+
+  // Otherwise return their subscription status with empty trial counts
+  return {
+    ...subscriptionStatus,
+    hasStartedTrial: trialStatus.hasStartedTrial,
+    trials: trialStatus.trials
   };
 }
 

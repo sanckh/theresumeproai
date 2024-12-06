@@ -51,9 +51,20 @@ const corsOptions: Parameters<typeof cors>[0] = {
 
 // Apply middleware
 app.use(cors(corsOptions));
-app.use(bodyParser.json());
 app.use(requestLogger);
 app.use(apiLimiter);
+
+// Apply JSON body parser to all routes except webhook endpoints
+app.use((req, res, next) => {
+  if (
+    req.originalUrl === '/api/subscription/stripe/webhook' ||
+    req.originalUrl === '/api/stripe/webhook'
+  ) {
+    next();
+  } else {
+    bodyParser.json()(req, res, next);
+  }
+});
 
 // API Routes
 app.use('/api/logs', logRoutes);
