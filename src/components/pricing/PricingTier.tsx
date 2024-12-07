@@ -5,17 +5,8 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
+import { PricingTierProps } from "@/interfaces/pricingTierProps";
 
-interface PricingTierProps {
-  name: string;
-  price: string;
-  tier: string;
-  description: string;
-  features: string[];
-  highlighted?: boolean;
-  trialFeatures: ReadonlyArray<'creator' | 'reviewer' | 'cover_letter'>;
-  trialDescription?: string;
-}
 
 export const PricingTier: React.FC<PricingTierProps> = ({
   name,
@@ -50,7 +41,6 @@ export const PricingTier: React.FC<PricingTierProps> = ({
         // Start trial with the first feature, which will initialize all trials
         await startTrialFromContext();
         
-        // Refresh the subscription status to get the updated hasStartedTrial value
         await refreshSubscription();
         
         toast.success("Trial started! You can now try all our features once - create a resume, get AI feedback, and generate a cover letter. Pick your preferred plan after trying everything!");
@@ -78,7 +68,6 @@ export const PricingTier: React.FC<PricingTierProps> = ({
       }
     }
 
-    // Navigate to subscription confirmation for paid subscription
     navigate("/subscription-confirm", {
       state: {
         tier: {

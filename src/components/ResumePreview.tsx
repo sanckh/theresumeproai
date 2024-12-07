@@ -4,31 +4,7 @@ import { useSubscription } from "@/contexts/SubscriptionContext";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Button } from "./ui/button";
 import { useNavigate } from "react-router-dom";
-import { EducationEntry, JobEntry } from "@/api/resume";
-
-interface Job {
-  title: string;
-  company: string;
-  startDate: string;
-  endDate: string;
-  description: string;
-  duties: string[];
-}
-
-interface ResumeData {
-  fullName: string;
-  email: string;
-  phone: string;
-  summary: string;
-  jobs: JobEntry[];
-  education: EducationEntry[];
-  skills: string;
-}
-
-interface ResumePreviewProps {
-  data: ResumeData;
-  template?: string;
-}
+import { ResumePreviewProps } from "@/interfaces/resumeReviewProps";
 
 export const ResumePreview = ({ data, template = "modern" }: ResumePreviewProps) => {
   const { canUseFeature } = useSubscription();
@@ -36,18 +12,27 @@ export const ResumePreview = ({ data, template = "modern" }: ResumePreviewProps)
 
   if (!canUseFeature('creator')) {
     return (
-      <Card className="p-6">
-        <Alert>
-          <AlertDescription>
-            You need a subscription to preview your resume. Get started with a free trial or upgrade your plan to access this feature.
-          </AlertDescription>
-          <Button 
-            onClick={() => navigate('/pricing')} 
-            className="mt-4"
+      <Alert>
+        <AlertDescription>
+          You need to upgrade your subscription to use this feature.
+          <Button
+            variant="link"
+            className="pl-2"
+            onClick={() => navigate('/pricing')}
           >
-            View Pricing
+            View Plans
           </Button>
-        </Alert>
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (!data?.data) {
+    return (
+      <Card className="p-8 print:p-0 print:shadow-none">
+        <div className="text-center text-gray-500">
+          No resume data available. Start by filling out your information.
+        </div>
       </Card>
     );
   }
@@ -89,25 +74,25 @@ export const ResumePreview = ({ data, template = "modern" }: ResumePreviewProps)
     <div className={`w-[8.5in] min-h-[11in] mx-auto bg-white print:w-full print:h-auto print:shadow-none print:border-none ${template === "modern" ? "border border-gray-300 shadow" : "shadow-lg"}`}>
       <div className="space-y-6 px-8 py-8">
         <div className={`text-center ${template === "minimal" ? "" : getSectionClasses()}`}>
-          <h1 className={getHeaderClasses()}>{data.fullName || "Your Name"}</h1>
+          <h1 className={getHeaderClasses()}>{data.data.fullName || "Your Name"}</h1>
           <div className="text-gray-600 flex items-center justify-center gap-4 text-sm">
-            {data.email && <span>{data.email}</span>}
-            {data.phone && <span>{formatPhoneNumber(data.phone)}</span>}
+            {data.data.email && <span>{data.data.email}</span>}
+            {data.data.phone && <span>{formatPhoneNumber(data.data.phone)}</span>}
           </div>
         </div>
 
-        {data.summary && (
+        {data.data.summary && (
           <section className={`break-inside-avoid print:break-inside-avoid ${getSectionClasses()}`}>
             <h2 className={`text-xl font-bold mb-3 break-after-avoid print:break-after-avoid ${template === "minimal" ? "uppercase" : ""}`}>Summary</h2>
-            <p className="text-gray-700 leading-relaxed whitespace-pre-line">{data.summary}</p>
+            <p className="text-gray-700 leading-relaxed whitespace-pre-line">{data.data.summary}</p>
           </section>
         )}
 
-        {data.jobs && data.jobs.length > 0 && (
+        {data.data.jobs?.length > 0 && (
           <section className={`break-inside-avoid print:break-inside-avoid ${getSectionClasses()}`}>
             <h2 className={`text-xl font-bold mb-4 break-after-avoid print:break-after-avoid ${template === "minimal" ? "uppercase" : ""}`}>Experience</h2>
             <div className="space-y-4">
-              {data.jobs.map((job, index) => (
+              {data.data.jobs.map((job, index) => (
                 <div key={index} className="break-inside-avoid print:break-inside-avoid pb-4 last:pb-0">
                   <div className="flex justify-between items-start mb-2">
                     <div>
@@ -140,11 +125,11 @@ export const ResumePreview = ({ data, template = "modern" }: ResumePreviewProps)
           </section>
         )}
 
-        {data.education && data.education.length > 0 && (
+        {data.data.education?.length > 0 && (
           <section className={`break-inside-avoid print:break-inside-avoid ${getSectionClasses()}`}>
             <h2 className={`text-xl font-bold mb-4 break-after-avoid print:break-after-avoid ${template === "minimal" ? "uppercase" : ""}`}>Education</h2>
             <div className="space-y-4">
-              {data.education.map((edu, index) => (
+              {data.data.education.map((edu, index) => (
                 <div key={index} className="break-inside-avoid print:break-inside-avoid pb-4 last:pb-0">
                   <div className="flex justify-between items-start">
                     <div>
@@ -169,11 +154,11 @@ export const ResumePreview = ({ data, template = "modern" }: ResumePreviewProps)
           </section>
         )}
 
-        {data.skills && (
+        {data.data.skills && (
           <section className={`break-inside-avoid print:break-inside-avoid ${template === "minimal" ? "" : getSectionClasses()}`}>
             <h2 className={`text-xl font-bold mb-3 break-after-avoid print:break-after-avoid ${template === "minimal" ? "uppercase" : ""}`}>Skills</h2>
             <p className="text-gray-700 leading-relaxed">
-              {data.skills.split(',').map((skill, index, array) => (
+              {data.data.skills.split(',').map((skill, index, array) => (
                 <span key={index}>
                   {skill.trim()}{index < array.length - 1 ? " • " : ""}
                 </span>

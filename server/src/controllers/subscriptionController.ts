@@ -1,8 +1,8 @@
 import { Response, Request } from 'express';
 import { AuthenticatedRequest } from '../interfaces/authenticatedRequest';
 import * as subscriptionService from '../services/subscriptionService';
-import { SubscriptionTier } from '../../types/subscription';
 import { handleWebhook } from '../services/stripeService';
+import { SubscriptionTier } from '../enums/subscriptionTier';
 
 export async function getSubscriptionStatus(req: AuthenticatedRequest, res: Response) {
   try {

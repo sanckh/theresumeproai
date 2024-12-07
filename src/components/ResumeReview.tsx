@@ -19,7 +19,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { SubscriptionStatus } from '../../server/types/subscription';
 
 interface ResumeAnalysis {
   score: number;

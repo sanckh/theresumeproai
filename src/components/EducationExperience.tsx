@@ -1,15 +1,8 @@
-import { EducationEntry } from "@/api/resume";
+import { EducationExperienceProps } from "@/interfaces/educationExperienceProps";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { X } from "lucide-react";
-
-interface EducationExperienceProps {
-  index: number;
-  education: EducationEntry;
-  onChange: (index: number, field: string, value: string) => void;
-  onRemove: (index: number) => void;
-}
 
 export const EducationExperience = ({ 
   index, 

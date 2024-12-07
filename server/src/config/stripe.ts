@@ -1,4 +1,5 @@
-import { SubscriptionTier } from '../../types/subscription';
+import { SubscriptionTier } from "../enums/subscriptionTier";
+
 
 export const STRIPE_CONFIG = {
   STRIPE_API_KEY: process.env.STRIPE_API_KEY,

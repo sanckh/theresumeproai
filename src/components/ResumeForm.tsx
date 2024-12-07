@@ -4,7 +4,6 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import { Card } from "./ui/card";
-import { JobExperience } from "./JobExperience";
 import { EducationExperience } from "./EducationExperience";
 import { Plus, Wand2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -19,133 +18,95 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { useSubscription } from "@/contexts/SubscriptionContext";
+import { JobEntry } from "@/interfaces/jobEntry";
+import { EducationEntry } from "@/interfaces/educationEntry";
 
-export const ResumeForm = ({ onUpdate }: { onUpdate: (data: {
-  fullName: string;
-  email: string;
-  phone: string;
-  summary: string;
-  jobs: { title: string; company: string; startDate: string; endDate?: string; description?: string; duties?: string[] }[];
-  education: { institution: string; degree: string; startDate: string; endDate?: string }[];
-  skills: string;
-}) => void }) => {
-  const [formData, setFormData] = useState({
-    fullName: "",
-    email: "",
-    phone: "",
-    summary: "",
-    jobs: [] as { title: string; company: string; startDate: string; endDate?: string; description?: string; duties?: string[] }[],
-    education: [] as { institution: string; degree: string; startDate: string; endDate?: string }[],
-    skills: "",
-  });
+interface ResumeFormProps {
+  data: {
+    fullName: string;
+    email: string;
+    phone: string;
+    summary: string;
+    jobs: JobEntry[];
+    education: EducationEntry[];
+    skills: string;
+  };
+  onChange: (field: string, value: unknown) => void;
+}
+
+export const ResumeForm = ({ data, onChange }: ResumeFormProps) => {
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const navigate = useNavigate();
   const { canUseFeature, subscriptionStatus } = useSubscription();
-  const canReview = canUseFeature('creator');
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    let newValue = value;
-    
-    // Format phone number if that's the field being changed
-    if (name === 'phone') {
-      newValue = formatPhoneNumber(value);
-    }
-    
-    const newData = { ...formData, [name]: newValue };
-    setFormData(newData);
-    onUpdate(newData);
+  const handleChange = (field: string, value: unknown) => {
+    onChange(field, value);
   };
 
-  const handleEducationChange = (index: number, field: keyof { institution: string; degree: string; startDate: string; endDate?: string }, value: string) => {
-    const newEducation = [...formData.education];
+  const handleEducationChange = (index: number, field: keyof EducationEntry, value: string) => {
+    const newEducation = [...data.education];
     newEducation[index] = { ...newEducation[index], [field]: value };
-    const newData = { ...formData, education: newEducation };
-    setFormData(newData);
-    onUpdate(newData);
+    handleChange("education", newEducation);
   };
 
   const addEducation = () => {
-    const newEducation: { institution: string; degree: string; startDate: string; endDate?: string } = {
+    const newEducation: EducationEntry = {
       institution: "",
       degree: "",
       startDate: "",
     };
-    const newData = {
-      ...formData,
-      education: [...formData.education, newEducation],
-    };
-    setFormData(newData);
-    onUpdate(newData);
+    handleChange("education", [...data.education, newEducation]);
   };
 
   const removeEducation = (index: number) => {
-    const newEducation = formData.education.filter((_, i) => i !== index);
-    const newData = { ...formData, education: newEducation };
-    setFormData(newData);
-    onUpdate(newData);
+    const newEducation = data.education.filter((_, i) => i !== index);
+    handleChange("education", newEducation);
   };
 
-  const handleJobChange = (index: number, field: keyof { title: string; company: string; startDate: string; endDate?: string; description?: string; duties?: string[] }, value: string | string[]) => {
-    const newJobs = [...formData.jobs];
+  const handleJobChange = (index: number, field: keyof JobEntry, value: string | string[]) => {
+    const newJobs = [...data.jobs];
     newJobs[index] = { ...newJobs[index], [field]: value };
-    const newData = { ...formData, jobs: newJobs };
-    setFormData(newData);
-    onUpdate(newData);
+    handleChange("jobs", newJobs);
   };
 
   const addJob = () => {
-    const newJob: { title: string; company: string; startDate: string; endDate?: string; description?: string; duties?: string[] } = {
+    const newJob: JobEntry = {
       title: "",
       company: "",
       startDate: "",
       duties: [],
     };
-    const newData = {
-      ...formData,
-      jobs: [...formData.jobs, newJob],
-    };
-    setFormData(newData);
-    onUpdate(newData);
+    handleChange("jobs", [...data.jobs, newJob]);
   };
 
   const removeJob = (index: number) => {
-    const newJobs = formData.jobs.filter((_, i) => i !== index);
-    const newData = { ...formData, jobs: newJobs };
-    setFormData(newData);
-    onUpdate(newData);
+    const newJobs = data.jobs.filter((_, i) => i !== index);
+    handleChange("jobs", newJobs);
   };
 
   const addDuty = (jobIndex: number) => {
-    const newJobs = [...formData.jobs];
+    const newJobs = [...data.jobs];
     if (!newJobs[jobIndex].duties) {
       newJobs[jobIndex].duties = [];
     }
     newJobs[jobIndex].duties?.push("");
-    const newData = { ...formData, jobs: newJobs };
-    setFormData(newData);
-    onUpdate(newData);
+    handleChange("jobs", newJobs);
   };
 
   const removeDuty = (jobIndex: number, dutyIndex: number) => {
-    const newJobs = [...formData.jobs];
+    const newJobs = [...data.jobs];
     newJobs[jobIndex].duties = newJobs[jobIndex].duties?.filter((_, i) => i !== dutyIndex) || [];
-    const newData = { ...formData, jobs: newJobs };
-    setFormData(newData);
-    onUpdate(newData);
+    handleChange("jobs", newJobs);
   };
 
   const handleDutyChange = (jobIndex: number, dutyIndex: number, value: string) => {
-    const newJobs = [...formData.jobs];
+    const newJobs = [...data.jobs];
     if (newJobs[jobIndex].duties) {
       newJobs[jobIndex].duties[dutyIndex] = value;
-      const newData = { ...formData, jobs: newJobs };
-      setFormData(newData);
-      onUpdate(newData);
+      handleChange("jobs", newJobs);
     }
   };
 
@@ -157,13 +118,11 @@ export const ResumeForm = ({ onUpdate }: { onUpdate: (data: {
         return;
       }
 
-      // Check if user can use the creator feature
       if (!canUseFeature('creator')) {
         setShowUpgradeDialog(true);
         return;
       }
 
-      // Check trial status before attempting to decrement
       if (subscriptionStatus?.hasStartedTrial) {
         if (subscriptionStatus.trials.creator.remaining <= 0) {
           setShowUpgradeDialog(true);
@@ -179,12 +138,16 @@ export const ResumeForm = ({ onUpdate }: { onUpdate: (data: {
         }
       }
 
-      // Only set isEnhancing after all checks pass
       setIsEnhancing(true);
 
-      const enhancedData = await enhanceWithAI(formData);
-      setFormData(enhancedData);
-      onUpdate(enhancedData);
+      const enhancedData = await enhanceWithAI(data);
+      handleChange("fullName", enhancedData.fullName);
+      handleChange("email", enhancedData.email);
+      handleChange("phone", enhancedData.phone);
+      handleChange("summary", enhancedData.summary);
+      handleChange("jobs", enhancedData.jobs);
+      handleChange("education", enhancedData.education);
+      handleChange("skills", enhancedData.skills);
       toast.success("Resume enhanced successfully!");
     } catch (error) {
       console.error("Error enhancing resume:", error);
@@ -258,8 +221,8 @@ export const ResumeForm = ({ onUpdate }: { onUpdate: (data: {
           <Input
             id="fullName"
             name="fullName"
-            value={formData.fullName}
-            onChange={handleChange}
+            value={data.fullName}
+            onChange={(e) => handleChange("fullName", e.target.value)}
             placeholder="John Doe"
           />
         </div>
@@ -269,8 +232,8 @@ export const ResumeForm = ({ onUpdate }: { onUpdate: (data: {
             id="email"
             name="email"
             type="email"
-            value={formData.email}
-            onChange={handleChange}
+            value={data.email}
+            onChange={(e) => handleChange("email", e.target.value)}
             placeholder="john@example.com"
           />
         </div>
@@ -279,8 +242,8 @@ export const ResumeForm = ({ onUpdate }: { onUpdate: (data: {
           <Input
             id="phone"
             name="phone"
-            value={formData.phone}
-            onChange={handleChange}
+            value={data.phone}
+            onChange={(e) => handleChange("phone", formatPhoneNumber(e.target.value))}
             placeholder="+1 (555) 000-0000"
           />
         </div>
@@ -290,8 +253,8 @@ export const ResumeForm = ({ onUpdate }: { onUpdate: (data: {
           <Textarea
             id="summary"
             name="summary"
-            value={formData.summary}
-            onChange={handleChange}
+            value={data.summary}
+            onChange={(e) => handleChange("summary", e.target.value)}
             placeholder="Brief overview of your professional background - our AI will help make it impactful"
             className="h-32"
           />
@@ -312,7 +275,7 @@ export const ResumeForm = ({ onUpdate }: { onUpdate: (data: {
             </Button>
           </div>
           <div className="space-y-6">
-            {formData.jobs.map((job, jobIndex) => (
+            {data.jobs.map((job, jobIndex) => (
               <Card key={jobIndex} className="p-4 mb-4">
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
@@ -423,7 +386,7 @@ export const ResumeForm = ({ onUpdate }: { onUpdate: (data: {
             </Button>
           </div>
           <div className="space-y-6">
-            {formData.education.map((edu, index) => (
+            {data.education.map((edu, index) => (
               <EducationExperience
                 key={index}
                 index={index}
@@ -440,8 +403,8 @@ export const ResumeForm = ({ onUpdate }: { onUpdate: (data: {
           <Textarea
             id="skills"
             name="skills"
-            value={formData.skills}
-            onChange={handleChange}
+            value={data.skills}
+            onChange={(e) => handleChange("skills", e.target.value)}
             placeholder="List your key skills - our AI will organize and highlight the most relevant ones"
             className="h-32"
           />

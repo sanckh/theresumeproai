@@ -1,11 +1,11 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
 import Stripe from 'stripe';
 import { db } from '../../firebase_options';
 import { collection, doc, getDoc, getDocs, query, setDoc, where } from 'firebase/firestore';
 import { logToFirestore } from './logs_service';
-import { SubscriptionStatus, SubscriptionTier } from '../../types/subscription';
 import { STRIPE_CONFIG } from '../config/stripe';
 import { getTierFromPriceId } from '../config/stripe';
+import { SubscriptionStatus } from '../interfaces/subscriptionStatus';
+import { SubscriptionTier } from '../enums/subscriptionTier';
 
 const stripe = new Stripe(STRIPE_CONFIG.STRIPE_API_KEY!, {
   apiVersion: '2022-11-15',

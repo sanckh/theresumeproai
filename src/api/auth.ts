@@ -1,14 +1,5 @@
 const API_URL = import.meta.env.VITE_API_URL;
 
-interface UserCredential {
-  user: {
-    uid: string;
-    email: string | null;
-    emailVerified: boolean;
-  };
-  token?: string;
-}
-
 export const register = async (email: string, password: string) => {
   const response = await fetch(`${API_URL}/auth/register`, {
     method: 'POST',
@@ -49,8 +40,12 @@ export const login = async (email: string, password: string) => {
 
     return data;
     
-  } catch (error: any) {
-    console.error('Network request failed:', error.message);
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error('Network request failed:', error.message);
+    } else {
+      console.error('Network request failed:', error);
+    }
     throw error;
   }
 };
@@ -101,9 +96,13 @@ export const resetPassword = async (email: string): Promise<void> => {
     if (!response.ok) {
       throw new Error(data.error || 'Failed to send password reset email');
     }
-  } catch (error: any) {
-    console.error('Error resetting password:', error.message);
-    throw new Error(error.message || 'Error resetting password');
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error('Error resetting password:', error.message);
+    } else {
+      console.error('Error resetting password:', error);
+    }
+    throw error;
   }
 };
 
@@ -137,8 +136,12 @@ export const resendVerificationEmail = async () => {
     }
 
     return data;
-  } catch (error: any) {
-    console.error('Failed to resend verification email:', error.message);
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error('Failed to resend verification email:', error.message);
+    } else {
+      console.error('Failed to resend verification email:', error);
+    }
     throw error;
   }
 };

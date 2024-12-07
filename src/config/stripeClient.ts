@@ -1,4 +1,4 @@
-import { SubscriptionTier } from '../enums/subscriptionEnum';
+import { SubscriptionTier } from '../enums/subscriptionTierEnum';
 
 export const STRIPE_PRICE_IDS = {
   RESUME_CREATOR: import.meta.env.VITE_STRIPE_PRICE_RESUME_CREATOR,

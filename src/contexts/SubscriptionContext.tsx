@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from "./AuthContext";
-import { decrementTrialUse, getSubscriptionStatus, startTrial, SubscriptionStatus } from "../api/subscription";
-import { SubscriptionTier } from '@/enums/subscriptionEnum';
+import { decrementTrialUse, getSubscriptionStatus, startTrial } from "../api/subscription";
+import { SubscriptionTier } from '@/enums/subscriptionTierEnum';
+import { SubscriptionStatus } from '@/interfaces/subscriptionStatus';
 
 interface SubscriptionContextType {
   subscriptionStatus: SubscriptionStatus | null;

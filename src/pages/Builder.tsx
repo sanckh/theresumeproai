@@ -18,17 +18,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Save, ChevronDown, Edit2 } from "lucide-react";
-import { getAllResumes, getResume, ResumeData, saveResume } from "@/api/resume";
+import { getAllResumes, getResume, saveResume } from "@/api/resume";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useNavigate } from "react-router-dom";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ResumeData } from "@/interfaces/resumeData";
+import { JobEntry } from "@/interfaces/jobEntry";
+import { EducationEntry } from "@/interfaces/educationEntry";
 
 const STORAGE_KEY = "saved_resume";
 
-interface SavedResume extends ResumeData {
-  updated_at?: string;
-}
+type SavedResume = ResumeData;
 
 const Builder = () => {
   const { user } = useAuth();
@@ -36,14 +37,19 @@ const Builder = () => {
   const canCreate = canUseFeature('creator');
   const navigate = useNavigate();
   const resumeRef = useRef<HTMLDivElement>(null);
-  const [resumeData, setResumeData] = useState<ResumeData["data"]>({
-    fullName: "",
-    email: "",
-    phone: "",
-    summary: "",
-    jobs: [],
-    education: [],
-    skills: "",
+  const [resumeData, setResumeData] = useState<ResumeData>({
+    id: "",
+    user_id: "",
+    name: "",
+    data: {
+      fullName: "",
+      email: "",
+      phone: "",
+      summary: "",
+      jobs: [],
+      education: [],
+      skills: "",
+    },
   });
 
   const [selectedTemplate, setSelectedTemplate] = useState("modern");
@@ -77,10 +83,11 @@ const Builder = () => {
         const resumes = await getAllResumes(user.uid);
         // Convert ResumeData[] to SavedResume[]
         const savedResumesList: SavedResume[] = resumes.map((resume) => ({
-          user_id: resume.user_id,
           id: resume.id || "",
+          user_id: resume.user_id,
           name: resume.name,
           data: resume.data,
+          created_at: resume.created_at || new Date().toISOString(),
           updated_at: resume.updated_at || new Date().toISOString(),
         }));
         setSavedResumes(savedResumesList);
@@ -90,7 +97,14 @@ const Builder = () => {
           const mostRecent = savedResumesList[0];
           setCurrentResumeId(mostRecent.id);
           setCurrentResumeName(mostRecent.name);
-          setResumeData(mostRecent.data);
+          setResumeData({
+            id: mostRecent.id,
+            user_id: mostRecent.user_id,
+            name: mostRecent.name,
+            data: mostRecent.data,
+            created_at: mostRecent.created_at,
+            updated_at: mostRecent.updated_at,
+          });
           toast.info(`Loaded "${mostRecent.name}"`);
         }
       } catch (error) {
@@ -108,21 +122,40 @@ const Builder = () => {
       const savedResume = localStorage.getItem(STORAGE_KEY);
       if (savedResume) {
         const parsedData = JSON.parse(savedResume);
-        setResumeData(parsedData);
+        setResumeData({
+          id: "",
+          user_id: "",
+          name: parsedData.name || currentResumeName,
+          data: parsedData.data || parsedData,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+        if (parsedData.name) {
+          setCurrentResumeName(parsedData.name);
+        }
         toast.info("Loaded your previously saved resume");
       }
     }
-  }, [user]);
+  }, [user, currentResumeName]);
 
-  const loadResumeById = async (resumeId: string) => {
-    if (!user?.uid) return;
+  const handleChange = (field: string, value: unknown) => {
+    setResumeData(prev => ({
+      ...prev,
+      data: {
+        ...prev.data,
+        [field]: value
+      }
+    }));
+  };
+
+  const loadResume = async (id: string) => {
+    if (!user) return;
 
     try {
-      const resume = await getResume(user.uid, resumeId);
-      setResumeData(resume.data);
-      setCurrentResumeId(resume.id);
-      setCurrentResumeName(resume.name);
-      toast.success("Resume loaded successfully");
+      const loadedResume = await getResume(user.uid, id);
+      if (loadedResume) {
+        setResumeData(loadedResume);
+      }
     } catch (error) {
       console.error("Error loading resume:", error);
       toast.error("Failed to load resume");
@@ -131,7 +164,17 @@ const Builder = () => {
 
   const handleSaveResume = async () => {
     if (!user?.uid) {
-      toast.error("Please sign in to save your resume");
+      // Save to local storage if user is not logged in
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          ...resumeData,
+          name: currentResumeName
+        }));
+        toast.success("Resume saved to browser storage");
+      } catch (error) {
+        console.error("Error saving to local storage:", error);
+        toast.error("Failed to save resume");
+      }
       return;
     }
 
@@ -139,7 +182,7 @@ const Builder = () => {
     try {
       const resumeId = await saveResume(
         user.uid,
-        resumeData,
+        resumeData.data,
         currentResumeName,
         currentResumeId || undefined
       );
@@ -148,10 +191,11 @@ const Builder = () => {
       const updatedResumes = await getAllResumes(user.uid);
       // Convert ResumeData[] to SavedResume[]
       const savedResumesList: SavedResume[] = updatedResumes.map((resume) => ({
-        user_id: resume.user_id,
         id: resume.id || "",
+        user_id: resume.user_id,
         name: resume.name,
         data: resume.data,
+        created_at: resume.created_at || new Date().toISOString(),
         updated_at: resume.updated_at || new Date().toISOString(),
       }));
       setSavedResumes(savedResumesList);
@@ -211,8 +255,8 @@ const Builder = () => {
       );
 
       // Generate filename based on user's name or default
-      const fileName = resumeData.fullName
-        ? `${resumeData.fullName.replace(/\s+/g, "_")}_Resume.pdf`
+      const fileName = resumeData.data.fullName
+        ? `${resumeData.data.fullName.replace(/\s+/g, "_")}_Resume.pdf`
         : "Resume.pdf";
 
       pdf.save(fileName);
@@ -300,7 +344,7 @@ const Builder = () => {
                       {savedResumes.map((resume) => (
                         <DropdownMenuItem
                           key={resume.id}
-                          onClick={() => loadResumeById(resume.id)}
+                          onClick={() => loadResume(resume.id)}
                         >
                           {resume.name}
                         </DropdownMenuItem>
@@ -348,11 +392,17 @@ const Builder = () => {
           <TabsContent value="builder">
             <div className="grid lg:grid-cols-2 gap-8">
               <div className="space-y-6">
-                <ResumeForm onUpdate={setResumeData} />
+                <ResumeForm
+                  data={resumeData.data}
+                  onChange={handleChange}
+                />
               </div>
               <div className="lg:sticky lg:top-8 space-y-6">
                 <div ref={resumeRef}>
-                  <ResumePreview data={resumeData} template={selectedTemplate} />
+                  <ResumePreview
+                    data={resumeData}
+                    template={selectedTemplate}
+                  />
                 </div>
               </div>
             </div>

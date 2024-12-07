@@ -1,6 +1,7 @@
 import { db } from '../../firebase_options';
-import { SubscriptionStatus, SubscriptionTier } from '../../types/subscription';
+import { SubscriptionTier } from '../enums/subscriptionTier';
 import { CreateSubscriptionData } from '../interfaces/createSubscriptionData';
+import { SubscriptionStatus } from '../interfaces/subscriptionStatus';
 
 
 const defaultTrials = {

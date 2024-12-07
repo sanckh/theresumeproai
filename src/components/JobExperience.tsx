@@ -1,21 +1,9 @@
+import { JobExperienceProps } from "@/interfaces/jobExperienceProps";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import { X } from "lucide-react";
-
-interface JobExperienceProps {
-  index: number;
-  job: {
-    title: string;
-    company: string;
-    startDate: string;
-    endDate?: string;
-    description?: string;
-  };
-  onChange: (index: number, field: string, value: string) => void;
-  onRemove: (index: number) => void;
-}
 
 export const JobExperience = ({ index, job, onChange, onRemove }: JobExperienceProps) => {
   return (

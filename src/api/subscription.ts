@@ -1,19 +1,6 @@
-import { SubscriptionTier } from 'server/types/subscription';
+import { SubscriptionTier } from '@/enums/subscriptionTierEnum';
 import { auth } from '../config/firebase';
-
-export interface SubscriptionStatus {
-  isActive: boolean;
-  tier: SubscriptionTier;
-  expiresAt?: string;
-  cancelAtPeriodEnd?: boolean;
-  trials: {
-    creator: { remaining: number };
-    reviewer: { remaining: number };
-    cover_letter: { remaining: number };
-  };
-  hasStartedTrial: boolean;
-}
-
+import { SubscriptionStatus } from '@/interfaces/subscriptionStatus';
 const API_URL = import.meta.env.VITE_API_URL;
 
 const getAuthHeaders = async () => {
@@ -38,7 +25,6 @@ export const getSubscriptionStatus = async (userId: string): Promise<Subscriptio
       throw new Error('Failed to get subscription status');
     }
     const data = await response.json();
-    console.log("Got subscription status:", data);
     return data.subscription;
   } catch (error) {
     console.error('Error getting subscription status:', error);
