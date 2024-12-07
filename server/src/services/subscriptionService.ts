@@ -1,14 +1,7 @@
 import { db } from '../../firebase_options';
 import { SubscriptionStatus, SubscriptionTier } from '../../types/subscription';
+import { CreateSubscriptionData } from '../interfaces/createSubscriptionData';
 
-interface CreateSubscriptionData {
-  tier: SubscriptionTier;
-  subscription_end_date?: string | null;
-}
-
-interface TrialData {
-  remainingUses: number;
-}
 
 const defaultTrials = {
   creator: { used: false, remaining: 1 },

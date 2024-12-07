@@ -1,4 +1,5 @@
 import { Router, raw } from 'express';
+import express from 'express';
 import { authenticateUser } from '../middleware/authMiddleware';
 import {
   getSubscriptionStatus,
@@ -10,7 +11,7 @@ import {
 } from '../controllers/subscriptionController';
 
 const router = Router();
-const express = require('express');
+
 
 router.post('/stripe/webhook', express.raw({ type: 'application/json' }), handleStripeWebhook);
 

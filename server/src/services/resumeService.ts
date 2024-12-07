@@ -1,40 +1,10 @@
 import admin from 'firebase-admin';
 import { db } from '../../firebase_options';
 import { logToFirestore } from './logs_service';
+import { JobEntry } from '../interfaces/jobEntry';
+import { EducationEntry } from '../interfaces/educationEntry';
+import { ResumeData } from '../interfaces/resumeData';
 
-export interface JobEntry {
-  company: string;
-  title: string;
-  startDate: string;
-  endDate?: string;
-  description?: string;
-  location?: string;
-  duties?: string[];
-}
-
-export interface EducationEntry {
-  institution: string;
-  degree: string;
-  startDate: string;
-  endDate?: string;
-}
-
-export interface ResumeData {
-  id?: string;
-  user_id: string;
-  name: string;
-  data: {
-    fullName: string;
-    email: string;
-    phone: string;
-    summary: string;
-    jobs: JobEntry[];
-    education: EducationEntry[];
-    skills: string;
-  };
-  created_at?: admin.firestore.FieldValue;
-  updated_at?: admin.firestore.FieldValue;
-}
 
 export const saveResume = async (
   userId: string, 
