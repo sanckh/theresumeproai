@@ -2,12 +2,7 @@
 import { Request, Response } from 'express';
 import { logToFirestore } from '../services/logs_service';
 
-/**
- * Log an event to Firestore.
- *
- * @param {Request} req - Express request object
- * @param {Response} res - Express response object
- */
+
 export const logEvent = async (req: Request, res: Response) => {
   try {
     const { eventType, message, data, timestamp } = req.body;

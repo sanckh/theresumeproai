@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Request, Response } from 'express';
 import { saveResume, getResume, getAllResumes } from '../services/resumeService';
 import { logToFirestore } from '../services/logs_service';

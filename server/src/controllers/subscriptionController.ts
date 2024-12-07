@@ -1,5 +1,5 @@
-import { Response, Request, request } from 'express';
-import { AuthenticatedRequest } from '../middleware/authMiddleware';
+import { Response, Request } from 'express';
+import { AuthenticatedRequest } from '../interfaces/authenticatedRequest';
 import * as subscriptionService from '../services/subscriptionService';
 import { SubscriptionTier } from '../../types/subscription';
 import { handleWebhook } from '../services/stripeService';

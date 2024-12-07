@@ -1,28 +1,7 @@
-export enum SubscriptionTier {
-  NONE = 'none',
-  FREE = 'free',
-  RESUME_CREATOR = 'resume_creator',
-  RESUME_PRO = 'resume_pro',
-  CAREER_PRO = 'career_pro'
-}
+import { SubscriptionTier } from "../src/enums/subscriptionTier";
+import { SubscriptionFeatures } from "../src/interfaces/subscriptionFeatures";
 
-export interface SubscriptionStatus {
-  tier: SubscriptionTier;
-  isActive: boolean;
-  subscription_end_date?: string | null;
-  hasStartedTrial: boolean;
-  trials: {
-    creator: { remaining: number };
-    reviewer: { remaining: number };
-    cover_letter: { remaining: number };
-  };
-}
 
-export interface SubscriptionFeatures {
-  canCreateResume: boolean;
-  canReviewResume: boolean;
-  canCreateCoverLetter: boolean;
-}
 
 export function getSubscriptionFeatures(tier: SubscriptionTier): SubscriptionFeatures {
   switch (tier) {

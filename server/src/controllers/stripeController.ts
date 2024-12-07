@@ -8,7 +8,6 @@ import {
   constructWebhookEvent
 } from '../services/stripeService';
 
-// Create Checkout Session
 export const createCheckoutSessionForUser = async (req: Request, res: Response) => {
   try {
     const { priceId, userId } = req.body;
@@ -38,7 +37,6 @@ export const createCheckoutSessionForUser = async (req: Request, res: Response) 
   }
 };
 
-// Handle Webhook
 export const handleWebhookMethod = async (req: Request, res: Response) => {
   try {
     const sig = req.headers['stripe-signature'] as string;
@@ -73,7 +71,6 @@ export const handleWebhookMethod = async (req: Request, res: Response) => {
   }
 };
 
-// Get Subscription Status
 export const getSubscriptionStatusForUser = async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
@@ -103,7 +100,6 @@ export const getSubscriptionStatusForUser = async (req: Request, res: Response) 
   }
 };
 
-// Cancel Subscription
 export const cancelSubscriptionForUser = async (req: Request, res: Response) => {
   try {
     const { userId } = req.body;

@@ -3,7 +3,6 @@ import { createCheckoutSessionForUser, handleWebhookMethod, getSubscriptionStatu
 
 const router = express.Router();
 
-// Stripe payment and subscription routes
 router.post('/create-checkout-session', createCheckoutSessionForUser);
 
 // Webhook needs raw body, so we use express.raw middleware specifically for this route

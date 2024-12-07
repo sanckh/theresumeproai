@@ -1,12 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import admin from 'firebase-admin';
-
-export interface AuthenticatedRequest extends Request {
-  user?: {
-    uid: string;
-    email?: string;
-  };
-}
+import { AuthenticatedRequest } from '../interfaces/authenticatedRequest';
 
 export const authenticateUser = async (
   req: AuthenticatedRequest,
