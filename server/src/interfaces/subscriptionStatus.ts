@@ -6,8 +6,8 @@ export interface SubscriptionStatus {
     subscription_end_date?: string | null;
     hasStartedTrial: boolean;
     trials: {
-      creator: { remaining: number };
-      reviewer: { remaining: number };
-      cover_letter: { remaining: number };
+      resume_creator: { remaining: number };
+      resume_pro: { remaining: number };
+      career_pro: { remaining: number };
     };
   }

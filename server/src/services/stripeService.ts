@@ -97,9 +97,9 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
       isActive: false,
       hasStartedTrial: false,
       trials: {
-        creator: { remaining: 0 },
-        reviewer: { remaining: 0 },
-        cover_letter: { remaining: 0 }
+        resume_creator: { remaining: 0 },
+        resume_pro: { remaining: 0 },
+        career_pro: { remaining: 0 }
       }
     };
   }
@@ -111,9 +111,9 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
     subscription_end_date: data?.subscription_end_date,
     hasStartedTrial: data?.hasStartedTrial || false,
     trials: {
-      creator: { remaining: data?.creator?.remaining || 0 },
-      reviewer: { remaining: data?.reviewer?.remaining || 0 },
-      cover_letter: { remaining: data?.cover_letter?.remaining || 0 }
+      resume_creator: { remaining: data?.resume_creator?.remaining || 0 },
+      resume_pro: { remaining: data?.resume_pro?.remaining || 0 },
+      career_pro: { remaining: data?.career_pro?.remaining || 0 }
     }
   };
 }

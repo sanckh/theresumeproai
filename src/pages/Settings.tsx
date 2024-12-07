@@ -78,13 +78,13 @@ const Settings = () => {
                   <label className="block text-sm font-medium mb-1">Trial Uses Remaining</label>
                   <div className="space-y-2">
                     <p className="text-gray-600">
-                      Resume Creator: {subscriptionStatus?.trials.creator.remaining || 0}
+                      Resume Creator: {subscriptionStatus?.trials.resume_creator.remaining || 0}
                     </p>
                     <p className="text-gray-600">
-                      Resume Reviewer: {subscriptionStatus?.trials.reviewer.remaining || 0}
+                      Resume Reviewer: {subscriptionStatus?.trials.resume_pro.remaining || 0}
                     </p>
                     <p className="text-gray-600">
-                      Cover Letter: {subscriptionStatus?.trials.cover_letter.remaining || 0}
+                      Cover Letter: {subscriptionStatus?.trials.career_pro.remaining || 0}
                     </p>
                   </div>
                 </div>

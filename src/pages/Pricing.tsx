@@ -19,7 +19,7 @@ export function Pricing() {
         "ATS-friendly format",
         "Real-time AI suggestions",
       ],
-      trialFeatures: ['creator', 'reviewer', 'cover_letter'] as const,
+      trialFeatures: ['resume_creator', 'resume_pro', 'career_pro'] as const,
       trialDescription: "Try all features once for free",
     },
     {
@@ -37,7 +37,7 @@ export function Pricing() {
         "Industry-specific tips",
       ],
       highlighted: true,
-      trialFeatures: ['creator', 'reviewer', 'cover_letter'] as const,
+      trialFeatures: ['resume_creator', 'resume_pro', 'career_pro'] as const,
       trialDescription: "Try all features once for free",
     },
     {
@@ -53,7 +53,7 @@ export function Pricing() {
         "Industry-specific cover letters",
         "Matching resume & cover letter designs",
       ],
-      trialFeatures: ['creator', 'reviewer', 'cover_letter'] as const,
+      trialFeatures: ['resume_creator', 'resume_pro', 'career_pro'] as const,
       trialDescription: "Try all features once for free",
     },
   ];
@@ -69,12 +69,6 @@ export function Pricing() {
           <p className="text-xl text-gray-600">
             Start with a free trial. No credit card required.
           </p>
-          {/* Debug information */}
-          <div className="mt-4 p-4 bg-gray-100 rounded-lg text-left text-sm">
-            <pre className="whitespace-pre-wrap">
-              Has Started Trial: {JSON.stringify(subscriptionStatus?.hasStartedTrial, null, 2)}
-            </pre>
-          </div>
         </div>
 
         <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">

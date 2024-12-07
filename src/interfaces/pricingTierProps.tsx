@@ -5,6 +5,6 @@ export interface PricingTierProps {
     description: string;
     features: string[];
     highlighted?: boolean;
-    trialFeatures: ReadonlyArray<'creator' | 'reviewer' | 'cover_letter'>;
+    trialFeatures: ReadonlyArray<'resume_creator' | 'resume_pro' | 'career_pro'>;
     trialDescription?: string;
   }

@@ -11,7 +11,7 @@ interface SubscriptionContextType {
   tier?: SubscriptionTier;
   canUseFeature: (feature: string) => boolean;
   startTrial: () => Promise<void>;
-  decrementTrialUse: (feature: 'creator' | 'reviewer' | 'cover_letter') => Promise<void>;
+  decrementTrialUse: (feature: 'resume_creator' | 'resume_pro' | 'career_pro') => Promise<void>;
   refreshSubscription: () => Promise<void>;
   checkSubscription: () => Promise<boolean>;
 }
@@ -21,9 +21,9 @@ const defaultSubscriptionStatus: SubscriptionStatus = {
   isActive: false,
   hasStartedTrial: false,
   trials: {
-    creator: { remaining: 0 },
-    reviewer: { remaining: 0 },
-    cover_letter: { remaining: 0 }
+    resume_creator: { remaining: 0 },
+    resume_pro: { remaining: 0 },
+    career_pro: { remaining: 0 }
   }
 };
 
@@ -38,14 +38,11 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const refreshSubscription = async () => {
     try {
       if (!user) {
-        console.log('No user, setting default subscription status');
         setSubscriptionStatus(defaultSubscriptionStatus);
         return;
       }
 
-      console.log('Refreshing subscription status for user:', user.uid);
       const status = await getSubscriptionStatus(user.uid);
-      console.log('Got subscription status:', status);
       setSubscriptionStatus(status);
       setError(null);
     } catch (err) {
@@ -59,13 +56,10 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const auth = useAuth();
 
   useEffect(() => {
-    console.log('Auth state changed, current user:', auth.user?.uid);
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
-        console.log('User logged in, refreshing subscription');
         refreshSubscription();
       } else {
-        console.log('User logged out, setting default status');
         setSubscriptionStatus(defaultSubscriptionStatus);
         setLoading(false);
       }
@@ -78,37 +72,25 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     if (!subscriptionStatus) return false;
 
     const { tier, isActive, hasStartedTrial, trials } = subscriptionStatus;
-    
-    console.log('Checking feature access:', {
-      feature,
-      tier,
-      isActive,
-      hasStartedTrial,
-      trials,
-    });
+
 
     // First check if user has remaining trial uses
     if (hasStartedTrial && trials) {
       const featureKey = feature as keyof typeof trials;
-      console.log('Trial check:', {
-        featureKey,
-        remainingUses: trials[featureKey]?.remaining
-      });
+
       if (trials[featureKey]?.remaining > 0) {
         return true;
       }
     }
 
-    // If no trial uses left or not on trial, check subscription
-    console.log('Subscription check:', { tier, feature, isActive });
     if (isActive) {
       switch (tier) {
         case SubscriptionTier.CAREER_PRO:
           return true;
         case SubscriptionTier.RESUME_PRO:
-          return feature !== 'cover_letter';
+          return feature !== 'career_pro';
         case SubscriptionTier.RESUME_CREATOR:
-          return feature === 'creator';
+          return feature === 'resume_creator';
         default:
           return false;
       }
@@ -131,7 +113,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   };
 
-  const handleDecrementTrialUse = async (feature: 'creator' | 'reviewer' | 'cover_letter') => {
+  const handleDecrementTrialUse = async (feature: 'resume_creator' | 'resume_pro' | 'career_pro') => {
     try {
       if (!user) throw new Error('User not authenticated');
 

@@ -26,9 +26,9 @@ export const Header = () => {
   };
 
   const handleBuildResume = () => {
-    const hasCreatorAccess = canUseFeature('creator');
-    const hasReviewerAccess = canUseFeature('reviewer');
-    const hasCoverLetterAccess = canUseFeature('cover_letter');
+    const hasCreatorAccess = canUseFeature('resume_creator');
+    const hasReviewerAccess = canUseFeature('resume_pro');
+    const hasCoverLetterAccess = canUseFeature('career_pro');
     if (!hasCreatorAccess && !hasReviewerAccess && !hasCoverLetterAccess) {
       toast.error("You need a subscription to build resumes. Start with a free trial!");
       navigate('/pricing');

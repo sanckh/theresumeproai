@@ -118,19 +118,19 @@ export const ResumeForm = ({ data, onChange }: ResumeFormProps) => {
         return;
       }
 
-      if (!canUseFeature('creator')) {
+      if (!canUseFeature('resume_creator')) {
         setShowUpgradeDialog(true);
         return;
       }
 
       if (subscriptionStatus?.hasStartedTrial) {
-        if (subscriptionStatus.trials.creator.remaining <= 0) {
+        if (subscriptionStatus.trials.resume_creator.remaining <= 0) {
           setShowUpgradeDialog(true);
           return;
         }
 
         try {
-          await decrementTrialUse(userId, 'creator');
+          await decrementTrialUse(userId, 'resume_creator');
         } catch (error) {
           console.error('Error decrementing trial:', error);
           setShowUpgradeDialog(true);
@@ -161,9 +161,6 @@ export const ResumeForm = ({ data, onChange }: ResumeFormProps) => {
     }
   };
 
-  useEffect(() => {
-    console.log('Dialog state changed:', showUpgradeDialog);
-  }, [showUpgradeDialog]);
 
   return (
     <Card className="p-6 space-y-6">

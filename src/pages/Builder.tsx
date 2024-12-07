@@ -34,7 +34,7 @@ type SavedResume = ResumeData;
 const Builder = () => {
   const { user } = useAuth();
   const { canUseFeature, subscriptionStatus } = useSubscription();
-  const canCreate = canUseFeature('creator');
+  const canCreate = canUseFeature('resume_creator');
   const navigate = useNavigate();
   const resumeRef = useRef<HTMLDivElement>(null);
   const [resumeData, setResumeData] = useState<ResumeData>({

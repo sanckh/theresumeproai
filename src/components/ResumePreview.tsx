@@ -10,7 +10,7 @@ export const ResumePreview = ({ data, template = "modern" }: ResumePreviewProps)
   const { canUseFeature } = useSubscription();
   const navigate = useNavigate();
 
-  if (!canUseFeature('creator')) {
+  if (!canUseFeature('resume_creator')) {
     return (
       <Alert>
         <AlertDescription>

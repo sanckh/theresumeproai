@@ -51,10 +51,7 @@ const SubscriptionConfirm = () => {
     try {
       // Convert tier name to match STRIPE_PRICE_IDS format (e.g., "Resume Pro" -> "RESUME_PRO")
       const priceIdKey = selectedTier.name.toUpperCase().replace(/\s+/g, '_') as keyof typeof STRIPE_PRICE_IDS;
-      console.log('Selected tier:', selectedTier.name);
-      console.log('Price ID key:', priceIdKey);
       const priceId = STRIPE_PRICE_IDS[priceIdKey];
-      console.log('Price ID:', priceId);
       
       if (!priceId) {
         throw new Error(`No price ID found for tier: ${selectedTier.name}`);

@@ -56,7 +56,7 @@ export async function decrementTrialUse(req: AuthenticatedRequest, res: Response
     const userId = req.user!.uid;
     const { feature } = req.body;
 
-    if (!feature || !['creator', 'reviewer', 'cover_letter'].includes(feature)) {
+    if (!feature || !['resume_creator', 'resume_pro', 'career_pro'].includes(feature)) {
       return res.status(400).json({ error: 'Invalid feature specified' });
     }
 

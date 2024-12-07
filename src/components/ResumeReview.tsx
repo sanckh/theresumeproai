@@ -10,7 +10,7 @@ import { analyzeResume, ParsedResume } from "@/utils/openai";
 import { parseDocument } from "@/utils/documentParser";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useNavigate } from "react-router-dom";
-import { decrementTrialUse, getSubscriptionStatus } from "@/api/subscription";
+import { decrementTrialUse } from "@/api/subscription";
 import { auth } from "@/config/firebase";
 import {
   Dialog,
@@ -37,7 +37,7 @@ const SUPPORTED_FILE_TYPES = {
 export const ResumeReview = () => {
   const { canUseFeature, subscriptionStatus } = useSubscription();
   const navigate = useNavigate();
-  const canReview = canUseFeature('reviewer');
+  const canReview = canUseFeature('resume_pro') || canUseFeature('career_pro');
 
   useEffect(() => {
     if (!canReview) {
@@ -119,15 +119,15 @@ export const ResumeReview = () => {
       }
 
       // Check if user can use the reviewer feature
-      if (!canUseFeature('reviewer')) {
+      if (!canUseFeature('resume_pro')) {
         setShowUpgradeDialog(true);
         return;
       }
 
       // Only decrement trial use if this is a trial and has remaining uses
-      if (subscriptionStatus?.hasStartedTrial && subscriptionStatus.trials.reviewer.remaining > 0) {
+      if (subscriptionStatus?.hasStartedTrial && subscriptionStatus.trials.resume_pro.remaining > 0) {
         try {
-          await decrementTrialUse(userId, 'reviewer');
+          await decrementTrialUse(userId, 'resume_pro');
           // Continue with analysis after successful decrement
           refetch();
         } catch (error) {

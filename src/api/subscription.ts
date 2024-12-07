@@ -53,7 +53,7 @@ export const startTrial = async (userId: string): Promise<SubscriptionStatus> =>
 
 export const decrementTrialUse = async (
   userId: string,
-  feature: 'creator' | 'reviewer' | 'cover_letter'
+  feature: 'resume_creator' | 'resume_pro' | 'career_pro'
 ): Promise<SubscriptionStatus> => {
   try {
     const headers = await getAuthHeaders();

@@ -5,17 +5,17 @@ import { SubscriptionStatus } from '../interfaces/subscriptionStatus';
 
 
 const defaultTrials = {
-  creator: { used: false, remaining: 1 },
-  reviewer: { used: false, remaining: 1 },
-  cover_letter: { used: false, remaining: 1 }
+  resume_creator: { used: false, remaining: 1 },
+  resume_pro: { used: false, remaining: 1 },
+  career_pro: { used: false, remaining: 1 }
 };
 
 async function getTrialStatus(userId: string): Promise<{
   hasStartedTrial: boolean;
   trials: {
-    creator: { remaining: number };
-    reviewer: { remaining: number };
-    cover_letter: { remaining: number };
+    resume_creator: { remaining: number };
+    resume_pro: { remaining: number };
+    career_pro: { remaining: number };
   }
 }> {
   const trialDoc = await db.collection('trials').doc(userId).get();
@@ -24,9 +24,9 @@ async function getTrialStatus(userId: string): Promise<{
     return {
       hasStartedTrial: false,
       trials: {
-        creator: { remaining: 0 },
-        reviewer: { remaining: 0 },
-        cover_letter: { remaining: 0 }
+        resume_creator: { remaining: 0 },
+        resume_pro: { remaining: 0 },
+        career_pro: { remaining: 0 }
       }
     };
   }
@@ -35,9 +35,9 @@ async function getTrialStatus(userId: string): Promise<{
   return {
     hasStartedTrial: true,
     trials: {
-      creator: { remaining: trialData?.creator?.remainingUses ?? 1 },
-      reviewer: { remaining: trialData?.reviewer?.remainingUses ?? 1 },
-      cover_letter: { remaining: trialData?.cover_letter?.remainingUses ?? 1 }
+      resume_creator: { remaining: trialData?.resume_creator?.remainingUses ?? 1 },
+      resume_pro: { remaining: trialData?.resume_pro?.remainingUses ?? 1 },
+      career_pro: { remaining: trialData?.career_pro?.remainingUses ?? 1 }
     }
   };
 }
@@ -73,7 +73,7 @@ export async function getUserSubscriptionStatus(userId: string): Promise<Subscri
   ]);
 
   // If user has an active trial, they get trial tier access regardless of subscription
-  if (trialStatus.trials.creator.remaining > 0) {
+  if (trialStatus.trials.resume_creator.remaining > 0) {
     return {
       tier: SubscriptionTier.RESUME_CREATOR,
       isActive: true,
@@ -117,9 +117,9 @@ export async function startTrial(
 
   // Initialize all trial types at once
   await trialRef.set({
-    creator: { remainingUses: 1, started_at: new Date().toISOString() },
-    reviewer: { remainingUses: 1, started_at: new Date().toISOString() },
-    cover_letter: { remainingUses: 1, started_at: new Date().toISOString() }
+    resume_creator: { remainingUses: 1, started_at: new Date().toISOString() },
+    resume_pro: { remainingUses: 1, started_at: new Date().toISOString() },
+    career_pro: { remainingUses: 1, started_at: new Date().toISOString() }
   });
 
   return getUserSubscriptionStatus(userId);
@@ -127,7 +127,7 @@ export async function startTrial(
 
 export async function decrementTrialUse(
   userId: string,
-  feature: 'creator' | 'reviewer' | 'cover_letter'
+  feature: 'resume_creator' | 'resume_pro' | 'career_pro'
 ): Promise<SubscriptionStatus> {
   const trialRef = db.collection('trials').doc(userId);
   const trialDoc = await trialRef.get();

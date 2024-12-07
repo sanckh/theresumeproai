@@ -6,9 +6,9 @@ export interface SubscriptionStatus {
     expiresAt?: string;
     cancelAtPeriodEnd?: boolean;
     trials: {
-      creator: { remaining: number };
-      reviewer: { remaining: number };
-      cover_letter: { remaining: number };
+      resume_creator: { remaining: number };
+      resume_pro: { remaining: number };
+      career_pro: { remaining: number };
     };
     hasStartedTrial: boolean;
   }

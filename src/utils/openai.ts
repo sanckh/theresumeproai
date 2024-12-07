@@ -1,5 +1,6 @@
+import { JobEntry } from "@/interfaces/jobEntry";
+import { ResumeData } from "@/interfaces/resumeData";
 import OpenAI from "openai";
-import { ResumeData, JobEntry } from "./database";
 
 let openai: OpenAI | null = null;
 
