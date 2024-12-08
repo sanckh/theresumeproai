@@ -154,8 +154,14 @@ export const ResumeReview = () => {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="space-y-6">
       <Card className="p-6">
+        <div className="bg-blue-50 p-4 rounded-lg mb-6">
+          <p className="text-blue-700">
+            Get expert feedback on your resume! Upload your resume below and our AI will analyze it for content, formatting, and ATS optimization. 
+            We'll provide detailed suggestions to help you stand out to recruiters and pass applicant tracking systems.
+          </p>
+        </div>
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <h2 className="text-lg font-semibold">Upload Your Resume</h2>

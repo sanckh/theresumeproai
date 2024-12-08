@@ -26,6 +26,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ResumeData } from "@/interfaces/resumeData";
 import { JobEntry } from "@/interfaces/jobEntry";
 import { EducationEntry } from "@/interfaces/educationEntry";
+import { CoverLetterForm } from "@/components/CoverLetterForm";
 
 const STORAGE_KEY = "saved_resume";
 
@@ -35,6 +36,8 @@ const Builder = () => {
   const { user } = useAuth();
   const { canUseFeature, subscriptionStatus } = useSubscription();
   const canCreate = canUseFeature('resume_creator');
+  const canReview = canUseFeature('resume_pro');
+  const canCoverLetter = canUseFeature('career_pro');
   const navigate = useNavigate();
   const resumeRef = useRef<HTMLDivElement>(null);
   const [resumeData, setResumeData] = useState<ResumeData>({
@@ -274,144 +277,91 @@ const Builder = () => {
       <Header />
 
       <main className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center gap-4">
-            <h1 className="text-3xl font-bold">Resume Builder</h1>
-            {user && (
-              <div className="text-sm text-gray-500 flex items-center gap-2 bg-white px-3 py-1.5 rounded-md border hover:border-gray-400 transition-colors">
-                <span className="font-medium">Working on:</span>
-                {isEditingName ? (
-                  <Input
-                    className="w-48 h-8 inline-block"
-                    value={currentResumeName}
-                    onChange={(e) => setCurrentResumeName(e.target.value)}
-                    onBlur={async () => {
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              {!isEditingName ? (
+                <h1
+                  className="text-2xl font-bold cursor-pointer hover:text-primary"
+                  onClick={() => setIsEditingName(true)}
+                >
+                  {currentResumeName}
+                </h1>
+              ) : (
+                <Input
+                  value={currentResumeName}
+                  onChange={(e) => setCurrentResumeName(e.target.value)}
+                  onBlur={() => setIsEditingName(false)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
                       setIsEditingName(false);
-                      if (user?.uid) {
-                        await handleSaveResume();
-                      }
-                    }}
-                    onKeyDown={async (e) => {
-                      if (e.key === "Enter") {
-                        setIsEditingName(false);
-                        if (user?.uid) {
-                          await handleSaveResume();
-                        }
-                      }
-                    }}
-                    autoFocus
-                  />
-                ) : (
-                  <div
-                    className="flex items-center gap-2 cursor-pointer group"
-                    onClick={() => setIsEditingName(true)}
-                  >
-                    <span className="font-medium text-gray-900">
-                      {currentResumeName}
-                    </span>
-                    <Edit2 className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-          <div className="space-x-4">
-            <Button variant="outline" onClick={() => setShowTemplates(!showTemplates)}>
-              {showTemplates ? "Hide Templates" : "Choose Template"}
-            </Button>
-
-            {user ? (
+                    }
+                  }}
+                  className="text-2xl font-bold w-64"
+                  autoFocus
+                />
+              )}
+              <Edit2
+                className="h-4 w-4 text-gray-400 cursor-pointer hover:text-primary"
+                onClick={() => setIsEditingName(true)}
+              />
+            </div>
+            <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={() => setShowTemplates(true)}
+              >
+                Change Template
+              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" disabled={isSaving}>
-                    <Save className="w-4 h-4 mr-2" />
-                    {isSaving ? "Saving..." : "Save"}
-                    <ChevronDown className="w-4 h-4 ml-2" />
+                  <Button className="gap-2">
+                    <Save className="h-4 w-4" />
+                    Save
+                    <ChevronDown className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => handleSaveResume()}>
-                    Save
+                  <DropdownMenuItem onClick={handleSaveResume}>
+                    Save Resume
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleSaveAs}>
-                    Save As...
+                  <DropdownMenuItem onClick={handleDownload}>
+                    Download as PDF
                   </DropdownMenuItem>
-                  {savedResumes.length > 0 && (
-                    <>
-                      <DropdownMenuItem className="font-semibold" disabled>
-                        Open Resume
-                      </DropdownMenuItem>
-                      {savedResumes.map((resume) => (
-                        <DropdownMenuItem
-                          key={resume.id}
-                          onClick={() => loadResume(resume.id)}
-                        >
-                          {resume.name}
-                        </DropdownMenuItem>
-                      ))}
-                    </>
-                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
-            ) : (
-              <Button
-                variant="outline"
-                onClick={() => handleSaveResume()}
-                disabled={isSaving}
-              >
-                <Save className="w-4 h-4 mr-2" />
-                {isSaving ? "Saving..." : "Save"}
-              </Button>
-            )}
-
-            <Button
-              onClick={handleDownload}
-              disabled={isDownloading}
-            >
-              {isDownloading ? "Generating PDF..." : "Download PDF"}
-            </Button>
+            </div>
           </div>
-        </div>
 
-        {showTemplates && (
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-4">Choose a Template</h2>
-            <Templates
-              selectedTemplate={selectedTemplate}
-              onSelectTemplate={setSelectedTemplate}
-            />
-          </div>
-        )}
-
-        <Tabs defaultValue="builder" className="space-y-8">
-          <TabsList>
-            <TabsTrigger value="builder">Resume Builder</TabsTrigger>
-            <TabsTrigger value="review">Resume Review</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="builder">
-            <div className="grid lg:grid-cols-2 gap-8">
-              <div className="space-y-6">
-                <ResumeForm
-                  data={resumeData.data}
-                  onChange={handleChange}
-                />
-              </div>
-              <div className="lg:sticky lg:top-8 space-y-6">
-                <div ref={resumeRef}>
-                  <ResumePreview
-                    data={resumeData}
-                    template={selectedTemplate}
-                  />
+          <Tabs defaultValue="builder">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="builder">Resume Builder</TabsTrigger>
+              <TabsTrigger value="review">Resume Review</TabsTrigger>
+              <TabsTrigger value="cover-letter">Cover Letter</TabsTrigger>
+            </TabsList>
+            <TabsContent value="builder" className="space-y-4">
+              <div className="grid grid-cols-2 gap-6">
+                <ResumeForm data={resumeData.data} onChange={handleChange} />
+                <div className="sticky top-4">
+                  <ResumePreview data={resumeData} template={selectedTemplate} />
                 </div>
               </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="review">
-            <ResumeReview />
-          </TabsContent>
-        </Tabs>
+            </TabsContent>
+            <TabsContent value="review">
+              <ResumeReview />
+            </TabsContent>
+            <TabsContent value="cover-letter">
+              <CoverLetterForm
+                savedResume={currentResumeId ? {
+                  id: currentResumeId,
+                  name: currentResumeName,
+                  data: resumeData.data
+                } : null}
+              />
+            </TabsContent>
+          </Tabs>
+        </div>
       </main>
     </div>
   );

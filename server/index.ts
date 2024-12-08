@@ -15,6 +15,7 @@ import logRoutes from './src/routes/log_routes';
 import resumeRoutes from './src/routes/resumeRoutes';
 import stripeRoutes from './src/routes/stripeRoutes';
 import subscriptionRoutes from './src/routes/subscriptionRoutes';
+import coverLetterRoutes from './src/routes/coverLetterRoutes';
 
 const app = express();
 const port = Number(process.env.PORT) || 3000;
@@ -71,6 +72,7 @@ app.use('/api/logs', logRoutes);
 app.use('/api/resume', resumeRoutes);
 app.use('/api/stripe', stripeRoutes);
 app.use('/api/subscription', subscriptionRoutes);
+app.use('api/coverLetter', coverLetterRoutes);
 
 app.get('/', (req: Request, res: Response) => {
   res.send('Backend running...');
