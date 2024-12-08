@@ -21,7 +21,7 @@ import { saveCoverLetter } from "@/api/coverLetter";
 import { decrementTrialUse } from "@/api/subscription";
 import { generateCoverLetterWithAI } from "@/utils/openai";
 
-export const CoverLetterForm = ({ savedResume }: CoverLetterFormProps) => {
+export const CoverLetterForm = ({ resume }: CoverLetterFormProps) => {
   const { canUseFeature, subscriptionStatus } = useSubscription();
   const navigate = useNavigate();
   const hasCareerProAccess = canUseFeature('career_pro');
@@ -34,7 +34,7 @@ export const CoverLetterForm = ({ savedResume }: CoverLetterFormProps) => {
 
   const handleGenerate = async () => {
     const userId = auth.currentUser?.uid;
-    if (!savedResume) {
+    if (!resume) {
       toast.error("Please select a resume first");
       return;
     }
@@ -45,13 +45,11 @@ export const CoverLetterForm = ({ savedResume }: CoverLetterFormProps) => {
 
     try {
       setIsGenerating(true);
-      const coverLetter = await generateCoverLetterWithAI(savedResume.data.data, jobDescription, jobUrl);
+      const coverLetter = await generateCoverLetterWithAI(resume.data, jobDescription, jobUrl);
       setGeneratedCoverLetter(coverLetter);
-      
-      // Save the generated cover letter
-      if (coverLetter) {
+            if (coverLetter) {
         await saveCoverLetter({
-          resumeId: savedResume.id,
+          resumeId: resume.id,
           content: coverLetter,
           jobDescription,
           jobUrl
@@ -59,7 +57,6 @@ export const CoverLetterForm = ({ savedResume }: CoverLetterFormProps) => {
         toast.success("Cover letter generated and saved successfully!");
       }
 
-      // Decrement trial use if applicable
       if (!hasCareerProAccess && subscriptionStatus?.trials?.career_pro?.remaining > 0) {
         await decrementTrialUse(userId,'career_pro');
       }

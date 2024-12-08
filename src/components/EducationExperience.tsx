@@ -46,21 +46,18 @@ export const EducationExperience = ({
           <Label htmlFor={`startDate-${index}`}>Start Date</Label>
           <Input
             id={`startDate-${index}`}
-            type="month"
             value={education.startDate}
             onChange={(e) => onChange(index, "startDate", e.target.value)}
-            required={!!(education.institution || education.degree)}
+            placeholder="e.g., Sept 2019"
           />
         </div>
         <div>
           <Label htmlFor={`endDate-${index}`}>End Date (or expected)</Label>
           <Input
             id={`endDate-${index}`}
-            type="month"
             value={education.endDate}
             onChange={(e) => onChange(index, "endDate", e.target.value)}
-            placeholder="Leave blank if currently studying"
-            max={new Date(new Date().getFullYear() + 10, 11).toISOString().slice(0, 7)}
+            placeholder="e.g., May 2023"
           />
         </div>
       </div>

@@ -19,11 +19,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ResumeData } from "@/interfaces/resumeData";
 
 interface ResumeAnalysis {
   score: number;
   suggestions: string[];
   strengths: string[];
+}
+
+interface ResumeReviewProps {
+  savedResume: ResumeData | null;
 }
 
 const SUPPORTED_FILE_TYPES = {
@@ -34,7 +39,7 @@ const SUPPORTED_FILE_TYPES = {
   "text/plain": "TXT",
 } as const;
 
-export const ResumeReview = () => {
+export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
   const { canUseFeature, subscriptionStatus } = useSubscription();
   const navigate = useNavigate();
   const hasResumeProAccess = canUseFeature('resume_pro');
@@ -51,6 +56,30 @@ export const ResumeReview = () => {
   const [parsedResume, setParsedResume] = useState<ParsedResume | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+
+  useEffect(() => {
+    if (savedResume) {
+      const parsed: ParsedResume = {
+        sections: {
+          "Personal Information": `${savedResume.data.fullName}\n${savedResume.data.email}\n${savedResume.data.phone}`,
+          "Summary": savedResume.data.summary,
+          "Experience": savedResume.data.jobs.map(job => 
+            `${job.title} at ${job.company}\n${job.description || ''}\n${job.duties?.join('\n') || ''}`
+          ).join('\n\n'),
+          "Education": savedResume.data.education.map(edu =>
+            `${edu.degree} at ${edu.institution}\n${edu.startDate} - ${edu.endDate}`
+          ).join('\n\n'),
+          "Skills": savedResume.data.skills
+        },
+        metadata: {
+          totalSections: 5,
+          sectionsList: ["Personal Information", "Summary", "Experience", "Education", "Skills"]
+        }
+      };
+      setParsedResume(parsed);
+      toast.info(`Analyzing "${savedResume.name}"`);
+    }
+  }, [savedResume]);
 
   const {
     data: analysis,
@@ -107,7 +136,7 @@ export const ResumeReview = () => {
   };
 
   const handleAnalyze = async () => {
-    if (!file) {
+    if (!file && !savedResume) {
       toast.error("Please upload a resume first");
       return;
     }
@@ -175,7 +204,7 @@ export const ResumeReview = () => {
               />
               <Button
                 onClick={handleAnalyze}
-                disabled={!file || isLoading || isUploading}
+                disabled={!file && !savedResume || isLoading || isUploading}
               >
                 {isLoading ? (
                   <>
@@ -201,15 +230,11 @@ export const ResumeReview = () => {
             </Alert>
           )}
 
-          {file && !isUploading && (
+          {(file || savedResume) && !isUploading && (
             <Alert>
               <Upload className="mr-2 h-4 w-4" />
               <AlertDescription>
-                {`${file.name} (${
-                  SUPPORTED_FILE_TYPES[
-                    file.type as keyof typeof SUPPORTED_FILE_TYPES
-                  ]
-                }) ready for analysis`}
+                {(file && `${file.name} (${SUPPORTED_FILE_TYPES[file.type as keyof typeof SUPPORTED_FILE_TYPES]})`) || savedResume.name} ready for analysis
               </AlertDescription>
             </Alert>
           )}

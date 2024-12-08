@@ -1,12 +1,8 @@
 import { ResumeData } from "./resumeData";
-import { SavedCoverLetter } from "./coverLetterData";
+import { SavedCoverLetter } from "./savedCoverLetter";
 
 export interface CoverLetterFormProps {
-  savedResume: {
-    id: string;
-    name: string;
-    data: ResumeData;
-  } | null;
+  resume: ResumeData | null;
   savedCoverLetter?: SavedCoverLetter;
   onGenerate?: () => Promise<void>;
   onSave?: () => Promise<void>;

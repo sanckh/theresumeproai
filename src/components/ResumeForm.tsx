@@ -20,21 +20,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useSubscription } from "@/contexts/SubscriptionContext";
-import { JobEntry } from "@/interfaces/jobEntry";
+import { ResumeContent } from "@/interfaces/resumeContent";
 import { EducationEntry } from "@/interfaces/educationEntry";
+import { JobEntry } from "@/interfaces/jobEntry";
+import { ResumeFormProps } from "@/interfaces/resumeFormProps";
 
-interface ResumeFormProps {
-  data: {
-    fullName: string;
-    email: string;
-    phone: string;
-    summary: string;
-    jobs: JobEntry[];
-    education: EducationEntry[];
-    skills: string;
-  };
-  onChange: (field: string, value: unknown) => void;
-}
+
 
 export const ResumeForm = ({ data, onChange }: ResumeFormProps) => {
   const [isEnhancing, setIsEnhancing] = useState(false);
@@ -57,6 +48,7 @@ export const ResumeForm = ({ data, onChange }: ResumeFormProps) => {
       institution: "",
       degree: "",
       startDate: "",
+      endDate: "",
     };
     handleChange("education", [...data.education, newEducation]);
   };
@@ -118,7 +110,6 @@ export const ResumeForm = ({ data, onChange }: ResumeFormProps) => {
         return;
       }
 
-      // If user has full access, proceed without trial checks
       if (canUseFeature('resume_creator')) {
         setIsEnhancing(true);
         const enhancedData = await enhanceWithAI(data);
@@ -132,7 +123,6 @@ export const ResumeForm = ({ data, onChange }: ResumeFormProps) => {
         return;
       }
 
-      // Only check trials if user doesn't have full access
       if (subscriptionStatus?.trials?.resume_creator?.remaining !== undefined) {
         if (subscriptionStatus.trials.resume_creator.remaining <= 0) {
           setShowUpgradeDialog(true);

@@ -276,63 +276,85 @@ const Builder = () => {
       <Header />
 
       <main className="container mx-auto px-4 py-8">
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              {!isEditingName ? (
-                <h1
-                  className="text-2xl font-bold cursor-pointer hover:text-primary"
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-4">
+            {isEditingName ? (
+              <Input
+                value={currentResumeName}
+                onChange={(e) => setCurrentResumeName(e.target.value)}
+                onBlur={() => setIsEditingName(false)}
+                onKeyDown={(e) => e.key === 'Enter' && setIsEditingName(false)}
+                className="w-64"
+                autoFocus
+              />
+            ) : (
+              <h1 className="text-3xl font-bold flex items-center gap-2">
+                {currentResumeName}
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => setIsEditingName(true)}
                 >
-                  {currentResumeName}
-                </h1>
-              ) : (
-                <Input
-                  value={currentResumeName}
-                  onChange={(e) => setCurrentResumeName(e.target.value)}
-                  onBlur={() => setIsEditingName(false)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      setIsEditingName(false);
-                    }
-                  }}
-                  className="text-2xl font-bold w-64"
-                  autoFocus
-                />
-              )}
-              <Edit2
-                className="h-4 w-4 text-gray-400 cursor-pointer hover:text-primary"
-                onClick={() => setIsEditingName(true)}
-              />
-            </div>
-            <div className="flex items-center gap-4">
-              <Button
-                variant="outline"
-                className="gap-2"
-                onClick={() => setShowTemplates(true)}
-              >
-                Change Template
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button className="gap-2">
-                    <Save className="h-4 w-4" />
-                    Save
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onClick={handleSaveResume}>
-                    Save Resume
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleDownload}>
-                    Download as PDF
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+                  <Edit2 className="h-4 w-4" />
+                </Button>
+              </h1>
+            )}
           </div>
 
+          <div className="flex items-center gap-4">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-2">
+                  <Save className="h-4 w-4" />
+                  {savedResumes.length > 0 ? "Select Resume" : "Create New"}
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                {savedResumes.map((resume) => (
+                  <DropdownMenuItem
+                    key={resume.id}
+                    onClick={() => {
+                      setCurrentResumeId(resume.id);
+                      setCurrentResumeName(resume.name);
+                      setResumeData(resume);
+                      toast.info(`Loaded "${resume.name}"`);
+                    }}
+                  >
+                    {resume.name}
+                  </DropdownMenuItem>
+                ))}
+                {savedResumes.length > 0 && (
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setCurrentResumeId(null);
+                      setCurrentResumeName("Untitled Resume");
+                      setResumeData({
+                        id: "",
+                        user_id: user?.uid || "",
+                        name: "Untitled Resume",
+                        data: {
+                          fullName: "",
+                          email: "",
+                          phone: "",
+                          summary: "",
+                          jobs: [],
+                          education: [],
+                          skills: "",
+                        },
+                      });
+                      toast.info("Created new resume");
+                    }}
+                  >
+                    Create New Resume
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
+        <div className="space-y-6">
           <Tabs defaultValue="builder">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="builder">Resume Builder</TabsTrigger>
@@ -348,16 +370,10 @@ const Builder = () => {
               </div>
             </TabsContent>
             <TabsContent value="review">
-              <ResumeReview />
+              <ResumeReview savedResume={resumeData} />
             </TabsContent>
             <TabsContent value="cover-letter">
-              <CoverLetterForm
-                savedResume={currentResumeId ? {
-                  id: currentResumeId,
-                  name: currentResumeName,
-                  data: resumeData,
-                } : null}
-              />
+              <CoverLetterForm resume={resumeData} />
             </TabsContent>
           </Tabs>
         </div>
