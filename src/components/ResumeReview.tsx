@@ -37,13 +37,15 @@ const SUPPORTED_FILE_TYPES = {
 export const ResumeReview = () => {
   const { canUseFeature, subscriptionStatus } = useSubscription();
   const navigate = useNavigate();
-  const canReview = canUseFeature('resume_pro') || canUseFeature('career_pro');
+  const hasResumeProAccess = canUseFeature('resume_pro');
+  const hasCareerProAccess = canUseFeature('career_pro');
 
   useEffect(() => {
-    if (!canReview) {
+    // User should have access if they have either Resume Pro or Career Pro
+    if (!hasResumeProAccess && !hasCareerProAccess) {
       navigate('/pricing');
     }
-  }, [canReview, navigate]);
+  }, [hasResumeProAccess, hasCareerProAccess, navigate]);
 
   const [file, setFile] = useState<File | null>(null);
   const [parsedResume, setParsedResume] = useState<ParsedResume | null>(null);
@@ -118,8 +120,8 @@ export const ResumeReview = () => {
         return;
       }
 
-      // Check if user can use the reviewer feature
-      if (!canUseFeature('resume_pro')) {
+      // Check if user has access to the review feature
+      if (!hasResumeProAccess && !hasCareerProAccess) {
         setShowUpgradeDialog(true);
         return;
       }

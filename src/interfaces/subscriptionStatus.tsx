@@ -1,14 +1,16 @@
 import { SubscriptionTier } from "@/enums/subscriptionTierEnum";
 
 export interface SubscriptionStatus {
-    isActive: boolean;
+    status: 'none' | 'active' | 'canceled' | 'incomplete' | 'incomplete_expired' | 'past_due' | 'trialing' | 'unpaid';
     tier: SubscriptionTier;
-    expiresAt?: string;
-    cancelAtPeriodEnd?: boolean;
+    subscription_end_date?: string | null;
     trials: {
       resume_creator: { remaining: number };
       resume_pro: { remaining: number };
       career_pro: { remaining: number };
     };
     hasStartedTrial: boolean;
-  }
+    stripeSubscriptionId?: string;
+    stripeCustomerId?: string;
+    updated_at?: string;
+}

@@ -18,7 +18,7 @@ interface SubscriptionContextType {
 
 const defaultSubscriptionStatus: SubscriptionStatus = {
   tier: SubscriptionTier.FREE,
-  isActive: false,
+  status: 'none',
   hasStartedTrial: false,
   trials: {
     resume_creator: { remaining: 0 },
@@ -71,19 +71,18 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const canUseFeature = (feature: string): boolean => {
     if (!subscriptionStatus) return false;
 
-    const { tier, isActive, hasStartedTrial, trials } = subscriptionStatus;
+    const { tier, status, hasStartedTrial, trials } = subscriptionStatus;
 
-
-    // First check if user has remaining trial uses
+    // Check trial access first
     if (hasStartedTrial && trials) {
       const featureKey = feature as keyof typeof trials;
-
       if (trials[featureKey]?.remaining > 0) {
         return true;
       }
     }
 
-    if (isActive) {
+    // Then check subscription access
+    if (status === 'active') {
       switch (tier) {
         case SubscriptionTier.CAREER_PRO:
           return true;
@@ -134,7 +133,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       }
       
       const status = await getSubscriptionStatus(user.uid);
-      return status.isActive && status.tier !== SubscriptionTier.FREE;
+      return status.status === 'active' && status.tier !== SubscriptionTier.FREE;
     } catch (err) {
       console.error('Error checking subscription:', err);
       return false;

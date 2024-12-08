@@ -93,8 +93,8 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
 
   if (!userDoc.exists) {
     return {
-      tier: SubscriptionTier.RESUME_CREATOR,
-      isActive: false,
+      tier: SubscriptionTier.FREE,
+      status: 'canceled',  
       hasStartedTrial: false,
       trials: {
         resume_creator: { remaining: 0 },
@@ -106,15 +106,18 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
 
   const data = userDoc.data();
   return {
-    tier: data?.tier || SubscriptionTier.RESUME_CREATOR,
-    isActive: data?.status === 'active' || data?.isActive === true,
+    tier: data?.tier || SubscriptionTier.FREE,
+    status: data?.stripeSubscriptionId ? (data?.status || 'canceled') : 'canceled',
     subscription_end_date: data?.subscription_end_date,
     hasStartedTrial: data?.hasStartedTrial || false,
     trials: {
       resume_creator: { remaining: data?.resume_creator?.remaining || 0 },
       resume_pro: { remaining: data?.resume_pro?.remaining || 0 },
       career_pro: { remaining: data?.career_pro?.remaining || 0 }
-    }
+    },
+    stripeSubscriptionId: data?.stripeSubscriptionId,
+    stripeCustomerId: data?.stripeCustomerId,
+    updated_at: data?.updated_at
   };
 }
 
@@ -160,9 +163,14 @@ async function updateSubscriptionInFirestore(
     updated_at: new Date().toISOString(),
   } : {
     tier: SubscriptionTier.FREE,
-    status: 'cancelled',
+    status: 'canceled',
     stripeSubscriptionId: null,
     updated_at: new Date().toISOString(),
+    trials: {
+      resume_creator: { remaining: 0 },
+      resume_pro: { remaining: 0 },
+      career_pro: { remaining: 0 }
+    }
   };
 
   await db.collection('subscriptions').doc(userId).set(data, { merge: true }); 

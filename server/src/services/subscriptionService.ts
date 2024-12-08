@@ -2,6 +2,8 @@ import { db } from '../../firebase_options';
 import { SubscriptionTier } from '../enums/subscriptionTier';
 import { CreateSubscriptionData } from '../interfaces/createSubscriptionData';
 import { SubscriptionStatus } from '../interfaces/subscriptionStatus';
+import * as stripeService from './stripeService';
+
 
 
 const defaultTrials = {
@@ -44,25 +46,34 @@ async function getTrialStatus(userId: string): Promise<{
 
 async function getPaidSubscriptionStatus(userId: string): Promise<{
   tier: SubscriptionTier;
-  isActive: boolean;
+  status: string;
   subscription_end_date?: string | null;
+  stripeSubscriptionId?: string;
+  stripeCustomerId?: string;
+  updated_at?: string;
 }> {
   const userDoc = await db.collection('subscriptions').doc(userId).get();
 
   if (!userDoc.exists) {
     return {
       tier: SubscriptionTier.NONE,
-      isActive: false
+      status: 'none'
     };
   }
 
   const userData = userDoc.data();
-  const isActive = userData?.status === 'active' || userData?.isActive === true;
-  
+
+  const status = userData?.status;
+  const validStatuses = ['active', 'canceled', 'incomplete', 'incomplete_expired', 'past_due', 'trialing', 'unpaid'] as const;
+  const finalStatus = (validStatuses.includes(status as typeof validStatuses[number]) ? status : 'canceled') as typeof validStatuses[number];
+
   return {
     tier: userData?.tier || SubscriptionTier.NONE,
-    isActive,
-    subscription_end_date: userData?.subscription_end_date
+    status: finalStatus,
+    subscription_end_date: userData?.subscription_end_date,
+    stripeSubscriptionId: userData?.stripeSubscriptionId,
+    stripeCustomerId: userData?.stripeCustomerId,
+    updated_at: userData?.updated_at,
   };
 }
 
@@ -72,22 +83,22 @@ export async function getUserSubscriptionStatus(userId: string): Promise<Subscri
     getPaidSubscriptionStatus(userId)
   ]);
 
-  // If user has an active trial, they get trial tier access regardless of subscription
-  if (trialStatus.trials.resume_creator.remaining > 0) {
+  // If user has an active paid subscription, it takes precedence over trials
+  if (subscriptionStatus.status === 'active') {
     return {
-      tier: SubscriptionTier.RESUME_CREATOR,
-      isActive: true,
+      ...subscriptionStatus,
       hasStartedTrial: trialStatus.hasStartedTrial,
       trials: trialStatus.trials
-    };
+    } as SubscriptionStatus;
   }
 
-  // Otherwise return their subscription status with empty trial counts
+  // If no active subscription but has trials, return trial status
   return {
-    ...subscriptionStatus,
+    tier: SubscriptionTier.FREE,
+    status: 'none',
     hasStartedTrial: trialStatus.hasStartedTrial,
     trials: trialStatus.trials
-  };
+  } as SubscriptionStatus;
 }
 
 export async function createSubscription(
@@ -96,7 +107,7 @@ export async function createSubscription(
 ): Promise<SubscriptionStatus> {
   await db.collection('subscriptions').doc(userId).set({
     tier: data.tier,
-    isActive: true,
+    status: 'active',
     subscription_end_date: data.subscription_end_date,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
@@ -156,10 +167,24 @@ export async function decrementTrialUse(
 }
 
 export async function cancelSubscription(userId: string): Promise<SubscriptionStatus> {
-  await db.collection('subscriptions').doc(userId).update({
-    isActive: false,
-    updated_at: new Date().toISOString()
-  });
+  // Cancel the subscription in Stripe, which will also update our database
+  try {
+    await stripeService.cancelSubscription(userId);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('No Stripe subscription ID found')) {
+      await db.collection('subscriptions').doc(userId).update({
+        status: 'canceled',
+        updated_at: new Date().toISOString(),
+        trials: {
+          resume_creator: { remaining: 0 },
+          resume_pro: { remaining: 0 },
+          career_pro: { remaining: 0 }
+        }
+      });
+    } else {
+      throw error;
+    }
+  }
 
   return getUserSubscriptionStatus(userId);
 }

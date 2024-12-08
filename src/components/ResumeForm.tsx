@@ -123,7 +123,8 @@ export const ResumeForm = ({ data, onChange }: ResumeFormProps) => {
         return;
       }
 
-      if (subscriptionStatus?.hasStartedTrial) {
+      // Check if subscription status exists and has trial information
+      if (subscriptionStatus?.hasStartedTrial && subscriptionStatus.trials?.resume_creator?.remaining !== undefined) {
         if (subscriptionStatus.trials.resume_creator.remaining <= 0) {
           setShowUpgradeDialog(true);
           return;

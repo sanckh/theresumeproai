@@ -8,7 +8,7 @@ import { CreditCard, User } from "lucide-react";
 
 const Settings = () => {
   const { user } = useAuth();
-  const { subscriptionStatus } = useSubscription();
+  const { subscriptionStatus, loading } = useSubscription();
 
   if (!user) {
     return (
@@ -16,6 +16,17 @@ const Settings = () => {
         <Card className="p-6 text-center">
           <h2 className="text-xl font-semibold mb-2">Please Sign In</h2>
           <p className="text-gray-600">Sign in to view your settings</p>
+        </Card>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card className="p-6 text-center">
+          <h2 className="text-xl font-semibold mb-2">Loading...</h2>
+          <p className="text-gray-600">Please wait while we load your settings</p>
         </Card>
       </div>
     );
@@ -78,13 +89,13 @@ const Settings = () => {
                   <label className="block text-sm font-medium mb-1">Trial Uses Remaining</label>
                   <div className="space-y-2">
                     <p className="text-gray-600">
-                      Resume Creator: {subscriptionStatus?.trials.resume_creator.remaining || 0}
+                      Resume Creator: {subscriptionStatus?.trials?.resume_creator?.remaining ?? 0}
                     </p>
                     <p className="text-gray-600">
-                      Resume Reviewer: {subscriptionStatus?.trials.resume_pro.remaining || 0}
+                      Resume Pro: {subscriptionStatus?.trials?.resume_pro?.remaining ?? 0}
                     </p>
                     <p className="text-gray-600">
-                      Cover Letter: {subscriptionStatus?.trials.career_pro.remaining || 0}
+                      Career Pro: {subscriptionStatus?.trials?.career_pro?.remaining ?? 0}
                     </p>
                   </div>
                 </div>
