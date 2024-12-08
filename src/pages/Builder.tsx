@@ -64,7 +64,6 @@ const Builder = () => {
   const [currentResumeName, setCurrentResumeName] = useState("Untitled Resume");
   const [isEditingName, setIsEditingName] = useState(false);
 
-  // If user is not signed in, redirect to sign in page
   useEffect(() => {
     if (!user) {
       navigate('/auth');
@@ -356,7 +355,7 @@ const Builder = () => {
                 savedResume={currentResumeId ? {
                   id: currentResumeId,
                   name: currentResumeName,
-                  data: resumeData.data
+                  data: resumeData,
                 } : null}
               />
             </TabsContent>

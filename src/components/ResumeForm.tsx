@@ -118,13 +118,22 @@ export const ResumeForm = ({ data, onChange }: ResumeFormProps) => {
         return;
       }
 
-      if (!canUseFeature('resume_creator')) {
-        setShowUpgradeDialog(true);
+      // If user has full access, proceed without trial checks
+      if (canUseFeature('resume_creator')) {
+        setIsEnhancing(true);
+        const enhancedData = await enhanceWithAI(data);
+        handleChange("fullName", enhancedData.fullName);
+        handleChange("email", enhancedData.email);
+        handleChange("phone", enhancedData.phone);
+        handleChange("summary", enhancedData.summary);
+        handleChange("jobs", enhancedData.jobs);
+        handleChange("education", enhancedData.education);
+        handleChange("skills", enhancedData.skills);
         return;
       }
 
-      // Check if subscription status exists and has trial information
-      if (subscriptionStatus?.hasStartedTrial && subscriptionStatus.trials?.resume_creator?.remaining !== undefined) {
+      // Only check trials if user doesn't have full access
+      if (subscriptionStatus?.trials?.resume_creator?.remaining !== undefined) {
         if (subscriptionStatus.trials.resume_creator.remaining <= 0) {
           setShowUpgradeDialog(true);
           return;
@@ -132,31 +141,27 @@ export const ResumeForm = ({ data, onChange }: ResumeFormProps) => {
 
         try {
           await decrementTrialUse(userId, 'resume_creator');
+          setIsEnhancing(true);
+          const enhancedData = await enhanceWithAI(data);
+          handleChange("fullName", enhancedData.fullName);
+          handleChange("email", enhancedData.email);
+          handleChange("phone", enhancedData.phone);
+          handleChange("summary", enhancedData.summary);
+          handleChange("jobs", enhancedData.jobs);
+          handleChange("education", enhancedData.education);
+          handleChange("skills", enhancedData.skills);
         } catch (error) {
           console.error('Error decrementing trial:', error);
           setShowUpgradeDialog(true);
           return;
         }
-      }
-
-      setIsEnhancing(true);
-
-      const enhancedData = await enhanceWithAI(data);
-      handleChange("fullName", enhancedData.fullName);
-      handleChange("email", enhancedData.email);
-      handleChange("phone", enhancedData.phone);
-      handleChange("summary", enhancedData.summary);
-      handleChange("jobs", enhancedData.jobs);
-      handleChange("education", enhancedData.education);
-      handleChange("skills", enhancedData.skills);
-      toast.success("Resume enhanced successfully!");
-    } catch (error) {
-      console.error("Error enhancing resume:", error);
-      if (error instanceof Error) {
-        toast.error(error.message);
       } else {
-        toast.error("Failed to enhance resume. Please try again.");
+        setShowUpgradeDialog(true);
+        return;
       }
+    } catch (error) {
+      console.error('Error enhancing with AI:', error);
+      toast.error('Failed to enhance resume with AI');
     } finally {
       setIsEnhancing(false);
     }

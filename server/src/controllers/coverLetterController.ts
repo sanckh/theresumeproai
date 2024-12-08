@@ -1,23 +1,16 @@
 import { Request, Response } from 'express';
-import { generateCoverLetter, saveCoverLetter, getCoverLetter, getAllCoverLetters, deleteCoverLetter } from '../services/coverLetterService';
-import { checkSubscription } from '../services/subscriptionService';
+import {  saveCoverLetter, getCoverLetter, getAllCoverLetters, deleteCoverLetter, generateCoverLetter } from '../services/coverLetterService';
 
 export const generateCoverLetterHandler = async (req: Request, res: Response) => {
   try {
     const { resumeData, jobDescription, jobUrl } = req.body;
-    const userId = req.user?.uid;
+    const userId = req.params.userId?.toString();
 
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    // Check if user has career_pro access
-    const hasAccess = await checkSubscription(userId, 'career_pro');
-    if (!hasAccess) {
-      return res.status(403).json({ error: 'Feature requires Career Pro subscription' });
-    }
-
-    const coverLetter = await generateCoverLetter(resumeData, jobDescription, jobUrl);
+    const coverLetter = await generateCoverLetter(userId, resumeData, jobDescription, jobUrl);
     res.json({ coverLetter });
   } catch (error) {
     console.error('Error in generateCoverLetterHandler:', error);
@@ -27,22 +20,14 @@ export const generateCoverLetterHandler = async (req: Request, res: Response) =>
 
 export const saveCoverLetterHandler = async (req: Request, res: Response) => {
   try {
-    const { resumeId, content, jobDescription, jobUrl } = req.body;
-    const userId = req.user?.uid;
+    const { resumeId, content, jobDescription, jobUrl, coverId } = req.body;
+    const userId = req.params.userId?.toString();
 
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const coverLetterId = await saveCoverLetter({
-      user_id: userId,
-      resume_id: resumeId,
-      content,
-      job_description: jobDescription,
-      job_url: jobUrl,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    });
+    const coverLetterId = await saveCoverLetter(userId, resumeId, content, jobDescription, jobUrl, coverId);
 
     res.json({ id: coverLetterId });
   } catch (error) {
@@ -54,7 +39,7 @@ export const saveCoverLetterHandler = async (req: Request, res: Response) => {
 export const getCoverLetterHandler = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const userId = req.user?.uid;
+    const userId = req.params.userId?.toString();
 
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -74,7 +59,7 @@ export const getCoverLetterHandler = async (req: Request, res: Response) => {
 
 export const getAllCoverLettersHandler = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.uid;
+    const userId = req.params.userId?.toString();
 
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -91,7 +76,7 @@ export const getAllCoverLettersHandler = async (req: Request, res: Response) => 
 export const deleteCoverLetterHandler = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const userId = req.user?.uid;
+    const userId = req.params.userId?.toString();
 
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' });

@@ -166,6 +166,7 @@ Suggestions:
 - [suggestion 2]
 ...`;
 
+
     const formatSection = (
       name: string,
       content: string | Record<string, ExperienceDetails>
@@ -431,4 +432,53 @@ const formatSkills = (skills: string | string[]): string => {
     .map((skill) => skill.trim())
     .filter((skill) => skill.length > 0)
     .join(", ");
+};
+
+export const generateCoverLetterWithAI = async (
+  resumeData: ResumeData["data"],
+  jobDescription?: string,
+  jobUrl?: string
+): Promise<string> => {
+  if (!openai) throw new Error("OpenAI client not initialized");
+
+  try {
+    let prompt = `Generate a professional cover letter based on the following resume and job information:\n\n`;
+    prompt += `Resume Information:\n`;
+    prompt += `Name: ${resumeData.fullName}\n`;
+    prompt += `Summary: ${resumeData.summary}\n`;
+    prompt += `Experience:\n${resumeData.jobs.map((job: JobEntry) => 
+      `- ${job.title} at ${job.company}\n  ${job.description || ''}\n  ${job.duties?.join('\n  ') || ''}`
+    ).join('\n')}\n\n`;
+    
+    prompt += `Job Information:\n`;
+    if (jobUrl) {
+      prompt += `Job URL: ${jobUrl}\n`;
+    }
+    if (jobDescription) {
+      prompt += `Job Description: ${jobDescription}\n`;
+    }
+
+    prompt += `\nWrite a compelling cover letter that highlights the relevant experience from the resume and demonstrates why the candidate would be a great fit for this role. The tone should be professional but personable. Format it properly with today's date and appropriate spacing.`;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: "You are a professional cover letter writer with expertise in crafting compelling, ATS-friendly cover letters."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      temperature: 0.7,
+      max_tokens: 1000
+    });
+
+    return response.choices[0].message.content || '';
+  } catch (error) {
+    console.error('Error generating cover letter:', error);
+    throw new Error('Failed to generate cover letter');
+  }
 };

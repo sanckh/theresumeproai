@@ -1,25 +1,21 @@
 import express from 'express';
 import { authenticateUser } from '../middleware/authMiddleware';
 import {
-  generateCoverLetterHandler,
   saveCoverLetterHandler,
   getCoverLetterHandler,
   getAllCoverLettersHandler,
   deleteCoverLetterHandler,
+  generateCoverLetterHandler,
 } from '../controllers/coverLetterController';
 
 const router = express.Router();
 
 router.use(authenticateUser);
 
-router.post('/generate', generateCoverLetterHandler);
-
-router.post('/save', saveCoverLetterHandler);
-
-router.get('/:id', getCoverLetterHandler);
-
-router.get('/', getAllCoverLettersHandler);
-
-router.delete('/:id', deleteCoverLetterHandler);
+router.post('/generate/:userId', generateCoverLetterHandler);
+router.post('/save/:userId', saveCoverLetterHandler);
+router.get('/:userId/:id', getCoverLetterHandler);
+router.get('/:userId', getAllCoverLettersHandler);
+router.delete('/:userId/:id', deleteCoverLetterHandler);
 
 export default router;

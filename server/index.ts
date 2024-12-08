@@ -72,7 +72,7 @@ app.use('/api/logs', logRoutes);
 app.use('/api/resume', resumeRoutes);
 app.use('/api/stripe', stripeRoutes);
 app.use('/api/subscription', subscriptionRoutes);
-app.use('api/coverLetter', coverLetterRoutes);
+app.use('/api/cover-letters', coverLetterRoutes);
 
 app.get('/', (req: Request, res: Response) => {
   res.send('Backend running...');

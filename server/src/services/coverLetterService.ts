@@ -1,127 +1,101 @@
-import { openai } from '../config/openai';
-import { db } from '../config/firebase';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import admin from 'firebase-admin';
+import { db } from '../../firebase_options';
 import { DocumentData, QueryDocumentSnapshot } from '@google-cloud/firestore';
+import { CoverLetterData } from '../interfaces/coverLetterData';
 
-export interface CoverLetterData {
-  id?: string;
-  user_id: string;
-  resume_id: string;
-  content: string;
-  job_description?: string;
-  job_url?: string;
-  created_at: string;
-  updated_at: string;
-}
+
 
 export const generateCoverLetter = async (
-  resumeData: any,
+  userId: string,
+  resumeId: string,
   jobDescription?: string,
   jobUrl?: string
 ): Promise<string> => {
-  try {
-    let prompt = `Generate a professional cover letter based on the following resume and job information:\n\n`;
-    prompt += `Resume Information:\n`;
-    prompt += `Name: ${resumeData.fullName}\n`;
-    prompt += `Summary: ${resumeData.summary}\n`;
-    prompt += `Experience:\n${resumeData.jobs.map((job: any) => 
-      `- ${job.title} at ${job.company}\n  ${job.description || ''}\n  ${job.duties?.join('\n  ') || ''}`
-    ).join('\n')}\n\n`;
-    
-    prompt += `Job Information:\n`;
-    if (jobUrl) {
-      prompt += `Job URL: ${jobUrl}\n`;
-    }
-    if (jobDescription) {
-      prompt += `Job Description: ${jobDescription}\n`;
-    }
-
-    prompt += `\nWrite a compelling cover letter that highlights the relevant experience from the resume and demonstrates why the candidate would be a great fit for this role. The tone should be professional but personable. Format it properly with today's date and appropriate spacing.`;
-
-    const response = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        {
-          role: "system",
-          content: "You are a professional cover letter writer with expertise in crafting compelling, ATS-friendly cover letters."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      temperature: 0.7,
-      max_tokens: 1000
-    });
-
-    return response.choices[0].message.content || '';
-  } catch (error) {
-    console.error('Error generating cover letter:', error);
-    throw new Error('Failed to generate cover letter');
-  }
+  //OpenAI implementation will be added here
+  return "Generated cover letter content";
 };
 
-export const saveCoverLetter = async (coverLetterData: CoverLetterData): Promise<string> => {
-  try {
-    const coverLetterRef = await db.collection('cover_letters').add({
-      ...coverLetterData,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    });
 
-    return coverLetterRef.id;
-  } catch (error) {
+export const saveCoverLetter = async (
+  userId: string,
+  resumeId: string,
+  content: string,
+  jobDescription?: string,
+  jobUrl?: string,
+  coverId?: string
+): Promise<string> => {
+  try {
+    const coverLetter: CoverLetterData = {
+      user_id: userId,
+      resume_id: resumeId,
+      content,
+      job_description: jobDescription,
+      job_url: jobUrl,
+      cover_id: coverId,
+      created_at: admin.firestore.FieldValue.serverTimestamp(),
+      updated_at: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    if (coverId) {
+      await db.collection('cover_letters').doc(coverId).set(coverLetter);
+      return coverId;
+    } else {
+      const docRef = await db.collection('cover_letters').add(coverLetter);
+      return docRef.id;
+    }
+  } catch (error: unknown) {
     console.error('Error saving cover letter:', error);
-    throw new Error('Failed to save cover letter');
+    throw error;
   }
 };
 
 export const getCoverLetter = async (userId: string, coverId: string): Promise<CoverLetterData | null> => {
   try {
-    const coverLetterDoc = await db.collection('cover_letters').doc(coverId).get();
-    
-    if (!coverLetterDoc.exists || coverLetterDoc.data()?.user_id !== userId) {
-      return null;
-    }
+    const doc = await db.collection('cover_letters').doc(coverId).get();
+    if (!doc.exists) return null;
+
+    const data = doc.data() as CoverLetterData;
+    if (data.user_id !== userId) return null;
 
     return {
-      id: coverLetterDoc.id,
-      ...coverLetterDoc.data()
-    } as CoverLetterData;
-  } catch (error) {
+      ...data,
+      id: doc.id
+    };
+  } catch (error: unknown) {
     console.error('Error getting cover letter:', error);
-    throw new Error('Failed to get cover letter');
+    throw error;
   }
 };
 
 export const getAllCoverLetters = async (userId: string): Promise<CoverLetterData[]> => {
   try {
-    const coverLettersSnapshot = await db
-      .collection('cover_letters')
+    const snapshot = await db.collection('cover_letters')
       .where('user_id', '==', userId)
       .orderBy('created_at', 'desc')
       .get();
 
-    return coverLettersSnapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => ({
-      id: doc.id,
-      ...doc.data()
-    })) as CoverLetterData[];
-  } catch (error) {
-    console.error('Error getting cover letters:', error);
-    throw new Error('Failed to get cover letters');
+    return snapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => ({
+      ...(doc.data() as CoverLetterData),
+      id: doc.id
+    }));
+  } catch (error: unknown) {
+    console.error('Error getting all cover letters:', error);
+    throw error;
   }
 };
 
 export const deleteCoverLetter = async (userId: string, coverId: string): Promise<void> => {
   try {
-    const coverLetterDoc = await db.collection('cover_letters').doc(coverId).get();
-    
-    if (!coverLetterDoc.exists || coverLetterDoc.data()?.user_id !== userId) {
-      throw new Error('Cover letter not found or unauthorized');
-    }
+    const doc = await db.collection('cover_letters').doc(coverId).get();
+    if (!doc.exists) throw new Error('Cover letter not found');
+
+    const data = doc.data() as CoverLetterData;
+    if (data.user_id !== userId) throw new Error('Unauthorized');
 
     await db.collection('cover_letters').doc(coverId).delete();
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error deleting cover letter:', error);
-    throw new Error('Failed to delete cover letter');
+    throw error;
   }
 };

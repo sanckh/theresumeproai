@@ -113,39 +113,36 @@ export const ResumeReview = () => {
     }
 
     try {
-      // Check subscription status first
       const userId = auth.currentUser?.uid;
       if (!userId) {
         toast.error("Please sign in to use resume review");
         return;
       }
 
-      // Check if user has access to the review feature
-      if (!hasResumeProAccess && !hasCareerProAccess) {
-        setShowUpgradeDialog(true);
+      // If user has full access, proceed without trial checks
+      if (hasResumeProAccess || hasCareerProAccess) {
+        refetch();
         return;
       }
 
-      // Only decrement trial use if this is a trial and has remaining uses
-      if (subscriptionStatus?.hasStartedTrial && subscriptionStatus.trials.resume_pro.remaining > 0) {
+      // Only check trials if user doesn't have full access
+      if (subscriptionStatus?.trials?.resume_pro?.remaining !== undefined) {
+        if (subscriptionStatus.trials.resume_pro.remaining <= 0) {
+          setShowUpgradeDialog(true);
+          return;
+        }
+
         try {
           await decrementTrialUse(userId, 'resume_pro');
-          // Continue with analysis after successful decrement
           refetch();
         } catch (error) {
-          if (error instanceof Error && error.message.includes('No remaining trial uses')) {
-            setShowUpgradeDialog(true);
-            return;
-          }
-          throw error;
+          console.error('Error decrementing trial:', error);
+          setShowUpgradeDialog(true);
+          return;
         }
-      } else if (subscriptionStatus?.hasStartedTrial) {
-        // Trial started but no remaining uses
+      } else {
         setShowUpgradeDialog(true);
         return;
-      } else {
-        // Not a trial, must be a paid subscription
-        refetch();
       }
     } catch (error) {
       console.error("Error analyzing resume:", error);

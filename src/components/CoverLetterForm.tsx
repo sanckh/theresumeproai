@@ -17,17 +17,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { CoverLetterFormProps } from "@/interfaces/coverLetterFormProps";
+import { saveCoverLetter } from "@/api/coverLetter";
+import { decrementTrialUse } from "@/api/subscription";
+import { generateCoverLetterWithAI } from "@/utils/openai";
 
 export const CoverLetterForm = ({ savedResume }: CoverLetterFormProps) => {
   const { canUseFeature, subscriptionStatus } = useSubscription();
   const navigate = useNavigate();
   const hasCareerProAccess = canUseFeature('career_pro');
-
-  useEffect(() => {
-    if (!hasCareerProAccess) {
-      navigate('/pricing');
-    }
-  }, [hasCareerProAccess, navigate]);
 
   const [jobDescription, setJobDescription] = useState("");
   const [jobUrl, setJobUrl] = useState("");
@@ -36,57 +33,36 @@ export const CoverLetterForm = ({ savedResume }: CoverLetterFormProps) => {
   const [generatedCoverLetter, setGeneratedCoverLetter] = useState("");
 
   const handleGenerate = async () => {
+    const userId = auth.currentUser?.uid;
     if (!savedResume) {
       toast.error("Please select a resume first");
       return;
     }
     if (!jobDescription && !jobUrl) {
-      toast.error("Please provide either a job description or job URL");
+      toast.error("Please provide either a job description or URL");
       return;
     }
-    const userId = auth.currentUser?.uid;
-    if (!userId) {
-      toast.error("Please sign in to generate a cover letter");
-      return;
-    }
-    if (!hasCareerProAccess) {
-      setShowUpgradeDialog(true);
-      return;
-    }
-    if (subscriptionStatus?.hasStartedTrial && subscriptionStatus.trials?.career_pro?.remaining !== undefined) {
-      if (subscriptionStatus.trials.career_pro.remaining <= 0) {
-        setShowUpgradeDialog(true);
-        return;
-      }
-      try {
-        await decrementTrialUse(userId, 'career_pro');
-      } catch (error) {
-        console.error('Error decrementing trial:', error);
-        setShowUpgradeDialog(true);
-        return;
-      }
-    }
-    setIsGenerating(true);
+
     try {
-      const response = await fetch("/api/cover-letters/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          resumeData: savedResume.data,
+      setIsGenerating(true);
+      const coverLetter = await generateCoverLetterWithAI(savedResume.data.data, jobDescription, jobUrl);
+      setGeneratedCoverLetter(coverLetter);
+      
+      // Save the generated cover letter
+      if (coverLetter) {
+        await saveCoverLetter({
+          resumeId: savedResume.id,
+          content: coverLetter,
           jobDescription,
-          jobUrl,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to generate cover letter");
+          jobUrl
+        });
+        toast.success("Cover letter generated and saved successfully!");
       }
 
-      const data = await response.json();
-      setGeneratedCoverLetter(data.coverLetter);
-      toast.success("Cover letter generated successfully!");
+      // Decrement trial use if applicable
+      if (!hasCareerProAccess && subscriptionStatus?.trials?.career_pro?.remaining > 0) {
+        await decrementTrialUse(userId,'career_pro');
+      }
     } catch (error) {
       console.error("Error generating cover letter:", error);
       toast.error("Failed to generate cover letter. Please try again.");
@@ -95,101 +71,38 @@ export const CoverLetterForm = ({ savedResume }: CoverLetterFormProps) => {
     }
   };
 
-  const handleSave = async () => {
-    if (!generatedCoverLetter) {
-      toast.error("Please generate a cover letter first");
-      return;
-    }
-
-    try {
-      // TODO: Call the API to save cover letter
-      const response = await fetch("/api/save-cover-letter", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          resumeId: savedResume?.id,
-          coverLetter: generatedCoverLetter,
-          jobDescription,
-          jobUrl,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to save cover letter");
-      }
-
-      toast.success("Cover letter saved successfully!");
-    } catch (error) {
-      console.error("Error saving cover letter:", error);
-      toast.error("Failed to save cover letter. Please try again.");
-    }
-  };
-
   return (
-    <div className="space-y-6">
-      <Card className="p-6">
-        <div className="bg-blue-50 p-4 rounded-lg mb-6">
-          <p className="text-blue-700">
-            Create a tailored cover letter in seconds! Input either a job URL or paste the job description below. 
-            Our AI will generate a professional cover letter that matches your resume to the job requirements.
-          </p>
-        </div>
-
+    <div className="space-y-4 p-4">
+      <Card className="p-4">
         <div className="space-y-4">
           <div>
-            <Label>Selected Resume</Label>
-            <div className="text-gray-600">
-              {savedResume ? savedResume.name : "No resume selected"}
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="jobUrl">Job Posting URL</Label>
-            <Input
-              id="jobUrl"
-              value={jobUrl}
-              onChange={(e) => {
-                setJobUrl(e.target.value);
-                // Clear job description if URL is being entered
-                if (e.target.value) {
-                  setJobDescription("");
-                }
-              }}
-              placeholder="https://example.com/job-posting"
-              disabled={!!jobDescription}
-            />
-          </div>
-
-          <div className="flex items-center">
-            <div className="flex-grow border-t border-gray-300"></div>
-            <span className="px-4 text-gray-500 text-sm">OR</span>
-            <div className="flex-grow border-t border-gray-300"></div>
-          </div>
-
-          <div>
-            <Label htmlFor="jobDescription">Job Description</Label>
+            <Label>Job Description</Label>
             <Textarea
-              id="jobDescription"
+              placeholder="Paste the job description here..."
               value={jobDescription}
               onChange={(e) => {
                 setJobDescription(e.target.value);
-                // Clear job URL if description is being entered
-                if (e.target.value) {
-                  setJobUrl("");
-                }
+                setJobUrl("");
               }}
-              placeholder="Paste the job description here..."
-              rows={8}
-              disabled={!!jobUrl}
+              disabled={!!jobUrl || isGenerating}
             />
           </div>
-
+          <div>
+            <Label>Job URL</Label>
+            <Input
+              type="url"
+              placeholder="Or enter the job posting URL..."
+              value={jobUrl}
+              onChange={(e) => {
+                setJobUrl(e.target.value);
+                setJobDescription("");
+              }}
+              disabled={!!jobDescription || isGenerating}
+            />
+          </div>
           <Button
             onClick={handleGenerate}
-            disabled={isGenerating || (!jobDescription && !jobUrl) || !savedResume}
-            className="w-full"
+            disabled={isGenerating || (!jobDescription && !jobUrl)}
           >
             {isGenerating ? (
               <>
@@ -204,18 +117,14 @@ export const CoverLetterForm = ({ savedResume }: CoverLetterFormProps) => {
       </Card>
 
       {generatedCoverLetter && (
-        <Card className="p-6">
+        <Card className="p-4">
           <div className="space-y-4">
             <Label>Generated Cover Letter</Label>
             <Textarea
               value={generatedCoverLetter}
               onChange={(e) => setGeneratedCoverLetter(e.target.value)}
-              rows={12}
-              className="font-serif"
+              className="min-h-[400px]"
             />
-            <Button onClick={handleSave} className="w-full">
-              Save Cover Letter
-            </Button>
           </div>
         </Card>
       )}
@@ -223,13 +132,17 @@ export const CoverLetterForm = ({ savedResume }: CoverLetterFormProps) => {
       <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Upgrade to Career Pro</DialogTitle>
+            <DialogTitle>Upgrade Required</DialogTitle>
             <DialogDescription>
-              Generate professional cover letters customized to each job posting with AI.
-              Upgrade now to unlock this feature!
+              This feature requires a Career Pro subscription. Would you like to upgrade?
             </DialogDescription>
           </DialogHeader>
-          <Button onClick={() => navigate('/pricing')}>View Plans</Button>
+          <div className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={() => setShowUpgradeDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => navigate("/pricing")}>View Plans</Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
