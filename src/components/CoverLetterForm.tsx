@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useNavigate } from "react-router-dom";
 import { auth } from "@/config/firebase";
-import { Loader2 } from "lucide-react";
+import { Loader2, Wand2 } from "lucide-react";
 import { UpgradeDialog } from "./UpgradeDialog";
 import { CoverLetterFormProps } from "@/interfaces/coverLetterFormProps";
 import { saveCoverLetter } from "@/api/coverLetter";
@@ -244,11 +244,8 @@ export const CoverLetterForm = ({ resume }: CoverLetterFormProps) => {
           </div>
           <Button
             onClick={handleGenerate}
-            disabled={
-              isGenerating || 
-              (!jobDescription && !jobUrl) || 
-              (resumeSource === "upload" ? !parsedResume : !resume)
-            }
+            className="w-full"
+            disabled={isGenerating || isUploading || (!parsedResume && resumeSource === "upload")}
           >
             {isGenerating ? (
               <>
@@ -256,7 +253,10 @@ export const CoverLetterForm = ({ resume }: CoverLetterFormProps) => {
                 Generating...
               </>
             ) : (
-              "Generate Cover Letter"
+              <>
+                <Wand2 className="mr-2 h-4 w-4" />
+                Generate Cover Letter
+              </>
             )}
           </Button>
         </div>

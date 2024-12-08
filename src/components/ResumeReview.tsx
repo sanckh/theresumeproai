@@ -165,7 +165,7 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
               />
               <Button
                 onClick={handleAnalyze}
-                disabled={!parsedResume || isLoading}
+                disabled={!parsedResume || isLoading || isUploading}
                 className="w-full max-w-sm"
               >
                 {isLoading ? (
@@ -173,8 +173,16 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Analyzing Resume...
                   </>
+                ) : isUploading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
                 ) : (
-                  "Analyze Resume"
+                  <>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Analyze Resume
+                  </>
                 )}
               </Button>
             </div>
