@@ -1,5 +1,5 @@
 import express from 'express';
-import { createCheckoutSessionForUser, handleWebhookMethod, getSubscriptionStatusForUser, cancelSubscriptionForUser } from '../controllers/stripeController';
+import { createCheckoutSessionForUser, handleWebhookMethod, getSubscriptionStatusForUser, cancelSubscriptionForUser, createChangeSubscriptionSession } from '../controllers/stripeController';
 
 const router = express.Router();
 
@@ -14,4 +14,7 @@ router.post(
 
 router.get('/subscription-status/:userId', getSubscriptionStatusForUser);
 router.post('/cancel-subscription', cancelSubscriptionForUser);
+
+router.post('/change', createChangeSubscriptionSession);
+
 export default router;

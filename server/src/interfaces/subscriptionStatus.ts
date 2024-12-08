@@ -4,6 +4,7 @@ export interface SubscriptionStatus {
   tier: SubscriptionTier;
   status: 'active' | 'canceled' | 'incomplete' | 'incomplete_expired' | 'past_due' | 'trialing' | 'unpaid' | 'none';
   subscription_end_date?: string | null;
+  renewal_date?: string | null;
   hasStartedTrial: boolean;
   trials: {
     resume_creator: { remaining: number };

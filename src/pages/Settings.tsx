@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
 import { CreditCard, User } from "lucide-react";
+import { CancelSubscriptionDialog } from '@/components/CancelSubscriptionDialog';
 
 const Settings = () => {
   const { user } = useAuth();
@@ -99,10 +100,17 @@ const Settings = () => {
                     </p>
                   </div>
                 </div>
-                <div className="pt-4">
+                <div className="pt-4 space-y-4">
                   <Button asChild>
                     <a href="/pricing">Manage Subscription</a>
                   </Button>
+                  
+                  {/* Only show cancel button if user has an active subscription */}
+                  {subscriptionStatus?.tier !== 'free' && (
+                    <div className="pt-2">
+                      <CancelSubscriptionDialog />
+                    </div>
+                  )}
                 </div>
               </div>
             </Card>

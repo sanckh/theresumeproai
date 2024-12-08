@@ -51,8 +51,15 @@ export async function handleWebhook(payload: string | Buffer, signature: string)
     case 'customer.subscription.deleted':
       console.log('Subscription update event, processing...');
       await handleSubscriptionUpdate(event.data.object as Stripe.Subscription);
-      console.log('Subscription update processed successfully');
       break;
+    case 'invoice.paid':
+      { console.log('Invoice paid event, processing...');
+      const invoice = event.data.object as Stripe.Invoice;
+      if (invoice.subscription) {
+        const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
+        await handleSubscriptionUpdate(subscription);
+      }
+      break; }
     default:
       await logToFirestore({
         eventType: 'WARNING',
@@ -96,6 +103,7 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
       tier: SubscriptionTier.FREE,
       status: 'canceled',  
       hasStartedTrial: false,
+      renewal_date: null,
       trials: {
         resume_creator: { remaining: 0 },
         resume_pro: { remaining: 0 },
@@ -109,6 +117,7 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
     tier: data?.tier || SubscriptionTier.FREE,
     status: data?.stripeSubscriptionId ? (data?.status || 'canceled') : 'canceled',
     subscription_end_date: data?.subscription_end_date,
+    renewal_date: data?.renewal_date,
     hasStartedTrial: data?.hasStartedTrial || false,
     trials: {
       resume_creator: { remaining: data?.resume_creator?.remaining || 0 },
@@ -138,16 +147,13 @@ export async function cancelSubscription(userId: string): Promise<void> {
 }
 
 async function findUserIdByCustomerId(customerId: string): Promise<string | null> {
-  const q = db.collection('subscriptions')
-    .where('stripeCustomerId', '==', customerId);
+  const querySnapshot = await db.collection('subscriptions').where('stripeCustomerId', '==', customerId).get();
   
-  const snapshot = await q.get();
-
-  if (snapshot.empty) {
+  if (querySnapshot.empty) {
     return null;
   }
 
-  return snapshot.docs[0].id;
+  return querySnapshot.docs[0].id;
 }
 
 async function updateSubscriptionInFirestore(
@@ -160,18 +166,40 @@ async function updateSubscriptionInFirestore(
     status: subscription.status,
     stripeSubscriptionId: subscription.id,
     stripeCustomerId: subscription.customer,
+    renewal_date: subscription.current_period_end ? new Date(subscription.current_period_end * 1000).toISOString() : null,
     updated_at: new Date().toISOString(),
   } : {
     tier: SubscriptionTier.FREE,
-    status: 'canceled',
+    status: 'none',
     stripeSubscriptionId: null,
+    stripeCustomerId: null,
+    renewal_date: null,
     updated_at: new Date().toISOString(),
-    trials: {
-      resume_creator: { remaining: 0 },
-      resume_pro: { remaining: 0 },
-      career_pro: { remaining: 0 }
-    }
   };
 
-  await db.collection('subscriptions').doc(userId).set(data, { merge: true }); 
+  // When canceling subscription, we want to overwrite the entire document
+  // to ensure old subscription data is cleared
+  if (!subscription) {
+    await db.collection('subscriptions').doc(userId).set(data);
+  } else {
+    await db.collection('subscriptions').doc(userId).set(data, { merge: true });
+  }
+}
+
+export async function createSubscriptionChangeSession(
+  userId: string,
+  newPriceId: string
+): Promise<string> {
+  const subscriptionDoc = await db.collection('subscriptions').doc(userId).get();
+  const subscriptionData = subscriptionDoc.data();
+  
+  if (!subscriptionData?.stripeSubscriptionId) {
+    throw new Error('No active subscription found');
+  }
+  const session = await stripe.billingPortal.sessions.create({
+    customer: subscriptionData.stripeCustomerId,
+    return_url: `${STRIPE_CONFIG.FRONTEND_URL}/pricing`,
+  });
+
+  return session.url;
 }

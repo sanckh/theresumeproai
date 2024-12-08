@@ -4,7 +4,7 @@ import { useSubscription } from "@/contexts/SubscriptionContext";
 
 export function Pricing() {
   const { subscriptionStatus } = useSubscription();
-
+  
   const pricingTiers = [
     {
       name: "Resume Creator",
@@ -59,34 +59,44 @@ export function Pricing() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
+    <div className="min-h-screen bg-background">
       <Header />
-      <main className="container mx-auto px-4 py-16">
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <h1 className="text-4xl font-bold mb-6">
-            Choose the Perfect Plan for Your Career Journey
-          </h1>
-          <p className="text-xl text-gray-600">
-            Start with a free trial. No credit card required.
+      <div className="container px-4 py-16 mx-auto">
+        {subscriptionStatus?.tier !== 'free' && (
+          <div className="mb-12 p-4 rounded-lg bg-primary/5 border border-primary/10">
+            <h2 className="text-xl font-semibold mb-2">Current Subscription</h2>
+            <p className="text-muted-foreground">
+              You are currently on the {subscriptionStatus?.tier.replace('_', ' ').toUpperCase()} plan.
+              {subscriptionStatus?.renewal_date && (
+                <span> Your next billing date is {new Date(subscriptionStatus.renewal_date).toLocaleDateString()}.</span>
+              )}
+            </p>
+          </div>
+        )}
+        
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold tracking-tight">Simple, Transparent Pricing</h1>
+          <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
+            Choose the perfect plan for your career journey. All plans include a free trial of premium features.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto">
           {pricingTiers.map((tier) => (
             <PricingTier key={tier.tier} {...tier} />
           ))}
         </div>
 
-        <div className="mt-16 text-center">
-          <div className="bg-secondary/30 p-6 rounded-lg max-w-2xl mx-auto">
-            <h3 className="font-semibold mb-2">Our Pricing Promise</h3>
-            <p className="text-gray-600">
-              We believe in transparent pricing with no hidden fees. All prices include unlimited exports 
+        <div className="mt-16 max-w-3xl mx-auto">
+          <div className="rounded-xl bg-primary/5 border border-primary/10 p-8 text-center">
+            <h3 className="text-xl font-semibold mb-3">Our Pricing Promise</h3>
+            <p className="text-muted-foreground">
+              We believe in transparent pricing with no hidden fees. All plans include unlimited exports 
               and updates. Not satisfied? Get a full refund within the first 30 days.
             </p>
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

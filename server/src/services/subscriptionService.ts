@@ -6,11 +6,6 @@ import * as stripeService from './stripeService';
 
 
 
-const defaultTrials = {
-  resume_creator: { used: false, remaining: 1 },
-  resume_pro: { used: false, remaining: 1 },
-  career_pro: { used: false, remaining: 1 }
-};
 
 async function getTrialStatus(userId: string): Promise<{
   hasStartedTrial: boolean;
@@ -48,33 +43,40 @@ async function getPaidSubscriptionStatus(userId: string): Promise<{
   tier: SubscriptionTier;
   status: string;
   subscription_end_date?: string | null;
+  renewal_date?: string;
   stripeSubscriptionId?: string;
   stripeCustomerId?: string;
   updated_at?: string;
 }> {
-  const userDoc = await db.collection('subscriptions').doc(userId).get();
+  const subscriptionDoc = await db.collection('subscriptions').doc(userId).get();
+  const userData = subscriptionDoc.exists ? subscriptionDoc.data() : null;
 
-  if (!userDoc.exists) {
+  if (!userData) {
     return {
-      tier: SubscriptionTier.NONE,
-      status: 'none'
+      tier: SubscriptionTier.FREE,
+      status: 'none',
     };
   }
 
-  const userData = userDoc.data();
+  // Determine final status
+  let finalStatus = userData.status;
+  if (userData.subscription_end_date) {
+    const endDate = new Date(userData.subscription_end_date);
+    if (endDate < new Date()) {
+      finalStatus = 'expired';
+    }
+  }
 
-  const status = userData?.status;
-  const validStatuses = ['active', 'canceled', 'incomplete', 'incomplete_expired', 'past_due', 'trialing', 'unpaid'] as const;
-  const finalStatus = (validStatuses.includes(status as typeof validStatuses[number]) ? status : 'canceled') as typeof validStatuses[number];
-
-  return {
-    tier: userData?.tier || SubscriptionTier.NONE,
+  const result = {
+    tier: userData.tier || SubscriptionTier.NONE,
     status: finalStatus,
-    subscription_end_date: userData?.subscription_end_date,
-    stripeSubscriptionId: userData?.stripeSubscriptionId,
-    stripeCustomerId: userData?.stripeCustomerId,
-    updated_at: userData?.updated_at,
+    subscription_end_date: userData.subscription_end_date,
+    renewal_date: userData.renewal_date,
+    stripeSubscriptionId: userData.stripeSubscriptionId,
+    stripeCustomerId: userData.stripeCustomerId,
+    updated_at: userData.updated_at,
   };
+  return result;
 }
 
 export async function getUserSubscriptionStatus(userId: string): Promise<SubscriptionStatus> {
@@ -83,22 +85,26 @@ export async function getUserSubscriptionStatus(userId: string): Promise<Subscri
     getPaidSubscriptionStatus(userId)
   ]);
 
+
   // If user has an active paid subscription, it takes precedence over trials
   if (subscriptionStatus.status === 'active') {
-    return {
+    const result = {
       ...subscriptionStatus,
       hasStartedTrial: trialStatus.hasStartedTrial,
       trials: trialStatus.trials
     } as SubscriptionStatus;
+    return result;
   }
 
   // If no active subscription but has trials, return trial status
-  return {
+  const result = {
     tier: SubscriptionTier.FREE,
     status: 'none',
     hasStartedTrial: trialStatus.hasStartedTrial,
-    trials: trialStatus.trials
+    trials: trialStatus.trials,
+    renewal_date: null
   } as SubscriptionStatus;
+  return result;
 }
 
 export async function createSubscription(

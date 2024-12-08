@@ -5,7 +5,8 @@ import {
   handleWebhook,
   getSubscriptionStatus,
   cancelSubscription,
-  constructWebhookEvent
+  constructWebhookEvent,
+  createSubscriptionChangeSession
 } from '../services/stripeService';
 
 export const createCheckoutSessionForUser = async (req: Request, res: Response) => {
@@ -52,10 +53,7 @@ export const handleWebhookMethod = async (req: Request, res: Response) => {
     }
 
     // Handle the webhook event
-    await handleWebhook(
-      typeof req.body === 'string' ? req.body : JSON.stringify(req.body) as string,
-      sig
-    );
+    await handleWebhook(req.body, sig);
     
     res.json({ received: true });
   } catch (error) {
@@ -136,3 +134,14 @@ export const cancelSubscriptionForUser = async (req: Request, res: Response) => 
     res.status(500).json({ error: errorMessage });
   }
 };
+
+export async function createChangeSubscriptionSession(req: Request, res: Response) {
+  try {
+    const { userId, newPriceId } = req.body;
+    const sessionUrl = await createSubscriptionChangeSession(userId, newPriceId);
+    res.json({ url: sessionUrl });
+  } catch (error) {
+    console.error('Error creating subscription change session:', error);
+    res.status(500).json({ error: 'Failed to create subscription change session' });
+  }
+}

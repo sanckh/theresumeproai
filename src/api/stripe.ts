@@ -34,3 +34,25 @@ export const createCheckoutSession = async (userId: string, priceId: string): Pr
     throw error;
   }
 };
+
+export const changeSubscription = async (
+  userId: string,
+  newPriceId: string
+): Promise<string> => {
+  try {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_URL}/subscription/change`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ userId, newPriceId })
+    });
+    if (!response.ok) {
+      throw new Error('Failed to create subscription change session');
+    }
+    const data = await response.json();
+    return data.url;
+  } catch (error) {
+    console.error('Error changing subscription:', error);
+    throw error;
+  }
+};
