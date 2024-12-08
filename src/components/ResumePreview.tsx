@@ -4,7 +4,7 @@ import { useSubscription } from "@/contexts/SubscriptionContext";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Button } from "./ui/button";
 import { useNavigate } from "react-router-dom";
-import { ResumePreviewProps } from "@/interfaces/resumeReviewProps";
+import { ResumePreviewProps } from "@/interfaces/resumePreviewProps";
 
 export const ResumePreview = ({ data, template = "modern" }: ResumePreviewProps) => {
   const { canUseFeature } = useSubscription();

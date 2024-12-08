@@ -12,24 +12,10 @@ import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useNavigate } from "react-router-dom";
 import { decrementTrialUse } from "@/api/subscription";
 import { auth } from "@/config/firebase";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { UpgradeDialog } from "./UpgradeDialog";
 import { ResumeData } from "@/interfaces/resumeData";
-
-interface ResumeAnalysis {
-  score: number;
-  suggestions: string[];
-  strengths: string[];
-}
-
-interface ResumeReviewProps {
-  savedResume: ResumeData | null;
-}
+import { ResumeAnalysis } from "@/interfaces/resumeAnalysis";
+import { ResumeReviewProps } from "@/interfaces/resumeReviewProps";
 
 const SUPPORTED_FILE_TYPES = {
   "application/pdf": "PDF",
@@ -56,6 +42,7 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
   const [parsedResume, setParsedResume] = useState<ParsedResume | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+  const [shouldAnalyze, setShouldAnalyze] = useState(false);
 
   useEffect(() => {
     if (savedResume) {
@@ -77,7 +64,8 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
         }
       };
       setParsedResume(parsed);
-      toast.info(`Analyzing "${savedResume.name}"`);
+      setShouldAnalyze(false);
+      toast.info(`Resume "${savedResume.name}" loaded successfully`);
     }
   }, [savedResume]);
 
@@ -91,7 +79,7 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
       if (!parsedResume) return null;
       return analyzeResume(parsedResume);
     },
-    enabled: true,
+    enabled: shouldAnalyze && !!parsedResume,
   });
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -101,19 +89,9 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
         try {
           setIsUploading(true);
           setFile(selectedFile);
+          setShouldAnalyze(false); 
           const parsed = await parseDocument(selectedFile);
           setParsedResume(parsed);
-
-          // Log the sections found by OpenAI
-          console.log("\n=== Resume Sections Found ===");
-          console.log("Total Sections:", parsed.metadata.totalSections);
-          console.log("\nSections List:");
-          parsed.metadata.sectionsList.forEach((section, index) => {
-            console.log(`${index + 1}. ${section}`);
-            console.log("Content:", parsed.sections[section]);
-            console.log("-".repeat(50));
-          });
-          console.log("=".repeat(50));
 
           toast.success(`${selectedFile.name} uploaded successfully!`);
         } catch (error) {
@@ -136,46 +114,29 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
   };
 
   const handleAnalyze = async () => {
-    if (!file && !savedResume) {
+    if (!parsedResume) {
       toast.error("Please upload a resume first");
+      return;
+    }
+    
+    const userId = auth.currentUser?.uid;
+    if (!hasResumeProAccess && !hasCareerProAccess) {
+      setShowUpgradeDialog(true);
       return;
     }
 
     try {
-      const userId = auth.currentUser?.uid;
-      if (!userId) {
-        toast.error("Please sign in to use resume review");
-        return;
-      }
-
-      // If user has full access, proceed without trial checks
-      if (hasResumeProAccess || hasCareerProAccess) {
-        refetch();
-        return;
-      }
-
-      // Only check trials if user doesn't have full access
-      if (subscriptionStatus?.trials?.resume_pro?.remaining !== undefined) {
-        if (subscriptionStatus.trials.resume_pro.remaining <= 0) {
-          setShowUpgradeDialog(true);
-          return;
-        }
-
-        try {
-          await decrementTrialUse(userId, 'resume_pro');
-          refetch();
-        } catch (error) {
-          console.error('Error decrementing trial:', error);
-          setShowUpgradeDialog(true);
-          return;
-        }
-      } else {
-        setShowUpgradeDialog(true);
-        return;
+      setShouldAnalyze(true);
+      toast.info("Analyzing your resume...");
+      
+      // Decrement trial use if applicable
+      if (!hasResumeProAccess && !hasCareerProAccess && subscriptionStatus?.trials?.resume_pro?.remaining > 0) {
+        await decrementTrialUse(userId, 'resume_pro');
       }
     } catch (error) {
       console.error("Error analyzing resume:", error);
       toast.error("Failed to analyze resume. Please try again.");
+      setShouldAnalyze(false);
     }
   };
 
@@ -204,18 +165,16 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
               />
               <Button
                 onClick={handleAnalyze}
-                disabled={!file && !savedResume || isLoading || isUploading}
+                disabled={!parsedResume || isLoading}
+                className="w-full max-w-sm"
               >
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Analyzing...
+                    Analyzing Resume...
                   </>
                 ) : (
-                  <>
-                    <Upload className="mr-2 h-4 w-4" />
-                    Analyze
-                  </>
+                  "Analyze Resume"
                 )}
               </Button>
             </div>
@@ -274,36 +233,12 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
 
       {/* Dialog component */}
       {showUpgradeDialog && (
-        <Dialog defaultOpen={true} onOpenChange={setShowUpgradeDialog}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle className="text-xl">Ready for expert resume analysis?</DialogTitle>
-              <DialogDescription className="text-base mt-4">
-                You've used your trial review. Upgrade to Career Pro to get:
-                <ul className="list-disc pl-6 mt-2 space-y-1">
-                  <li>Unlimited resume reviews</li>
-                  <li>Expert insights and feedback</li>
-                  <li>Industry-specific recommendations</li>
-                  <li>Detailed scoring and analysis</li>
-                </ul>
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex justify-end gap-4 mt-6">
-              <Button variant="outline" onClick={() => setShowUpgradeDialog(false)}>
-                Maybe Later
-              </Button>
-              <Button 
-                onClick={() => {
-                  setShowUpgradeDialog(false);
-                  navigate('/pricing', { state: { highlightTier: 'career_pro' } });
-                }}
-                className="bg-primary hover:bg-primary/90"
-              >
-                Upgrade Now
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <UpgradeDialog
+          isOpen={showUpgradeDialog}
+          onClose={() => setShowUpgradeDialog(false)}
+          feature="resume analysis"
+          isTrialExpired={subscriptionStatus?.trials?.resume_pro?.remaining === 0}
+        />
       )}
     </div>
   );

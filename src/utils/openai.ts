@@ -1,5 +1,6 @@
 import { JobEntry } from "@/interfaces/jobEntry";
 import { ResumeData } from "@/interfaces/resumeData";
+import { ResumeContent } from "@/interfaces/resumeContent";
 import OpenAI from "openai";
 
 let openai: OpenAI | null = null;
@@ -435,7 +436,7 @@ const formatSkills = (skills: string | string[]): string => {
 };
 
 export const generateCoverLetterWithAI = async (
-  resumeData: ResumeData["data"],
+  resumeData: ResumeData["data"] | ParsedResume,
   jobDescription?: string,
   jobUrl?: string
 ): Promise<string> => {
@@ -444,11 +445,21 @@ export const generateCoverLetterWithAI = async (
   try {
     let prompt = `Generate a professional cover letter based on the following resume and job information:\n\n`;
     prompt += `Resume Information:\n`;
-    prompt += `Name: ${resumeData.fullName}\n`;
-    prompt += `Summary: ${resumeData.summary}\n`;
-    prompt += `Experience:\n${resumeData.jobs.map((job: JobEntry) => 
-      `- ${job.title} at ${job.company}\n  ${job.description || ''}\n  ${job.duties?.join('\n  ') || ''}`
-    ).join('\n')}\n\n`;
+    
+    if ('sections' in resumeData) {
+      // Handle ParsedResume type
+      const sections = resumeData.sections;
+      prompt += `Name: ${sections['Contact Information'] || 'Not provided'}\n`;
+      prompt += `Summary: ${sections['Summary'] || sections['Professional Summary'] || ''}\n`;
+      prompt += `Experience:\n${sections['Experience'] || sections['Work Experience'] || ''}\n\n`;
+    } else {
+      // Handle ResumeContent type
+      prompt += `Name: ${resumeData.fullName}\n`;
+      prompt += `Summary: ${resumeData.summary}\n`;
+      prompt += `Experience:\n${resumeData.jobs.map((job: JobEntry) => 
+        `- ${job.title} at ${job.company}\n  ${job.description || ''}\n  ${job.duties?.join('\n  ') || ''}`
+      ).join('\n')}\n\n`;
+    }
     
     prompt += `Job Information:\n`;
     if (jobUrl) {

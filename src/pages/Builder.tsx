@@ -76,10 +76,10 @@ const Builder = () => {
     }
   }, [canCreate, navigate]);
 
-  // Load saved resumes list when user logs in
+  // Load saved resumes into dropdown but don't auto-select
   useEffect(() => {
     const loadSavedResumes = async () => {
-      if (!user?.uid) return; // Don't load resumes if no user
+      if (!user?.uid) return;
 
       try {
         const resumes = await getAllResumes(user.uid);
@@ -93,22 +93,6 @@ const Builder = () => {
           updated_at: resume.updated_at || new Date().toISOString(),
         }));
         setSavedResumes(savedResumesList);
-
-        // Load most recent resume if none is selected
-        if (savedResumesList.length > 0 && !currentResumeId) {
-          const mostRecent = savedResumesList[0];
-          setCurrentResumeId(mostRecent.id);
-          setCurrentResumeName(mostRecent.name);
-          setResumeData({
-            id: mostRecent.id,
-            user_id: mostRecent.user_id,
-            name: mostRecent.name,
-            data: mostRecent.data,
-            created_at: mostRecent.created_at,
-            updated_at: mostRecent.updated_at,
-          });
-          toast.info(`Loaded "${mostRecent.name}"`);
-        }
       } catch (error) {
         console.error("Error loading resumes:", error);
         toast.error("Failed to load saved resumes");
@@ -116,7 +100,7 @@ const Builder = () => {
     };
 
     loadSavedResumes();
-  }, [user, currentResumeId]);
+  }, [user]);
 
   // Load local storage resume if no user is logged in
   useEffect(() => {
@@ -306,7 +290,7 @@ const Builder = () => {
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="flex items-center gap-2">
                   <Save className="h-4 w-4" />
-                  {savedResumes.length > 0 ? "Select Resume" : "Create New"}
+                  {currentResumeId ? currentResumeName : (savedResumes.length > 0 ? "Select Resume" : "Create New")}
                   <ChevronDown className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -317,7 +301,7 @@ const Builder = () => {
                     onClick={() => {
                       setCurrentResumeId(resume.id);
                       setCurrentResumeName(resume.name);
-                      setResumeData(resume);
+                      loadResume(resume.id);
                       toast.info(`Loaded "${resume.name}"`);
                     }}
                   >

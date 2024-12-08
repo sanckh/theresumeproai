@@ -12,20 +12,12 @@ import { formatPhoneNumber } from "@/utils/formatters";
 import { decrementTrialUse } from "@/api/subscription";
 import { auth } from "@/config/firebase";
 import { useNavigate } from "react-router-dom";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { UpgradeDialog } from "./UpgradeDialog";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { ResumeContent } from "@/interfaces/resumeContent";
 import { EducationEntry } from "@/interfaces/educationEntry";
 import { JobEntry } from "@/interfaces/jobEntry";
 import { ResumeFormProps } from "@/interfaces/resumeFormProps";
-
-
 
 export const ResumeForm = ({ data, onChange }: ResumeFormProps) => {
   const [isEnhancing, setIsEnhancing] = useState(false);
@@ -176,36 +168,12 @@ export const ResumeForm = ({ data, onChange }: ResumeFormProps) => {
       </div>
 
       {showUpgradeDialog && (
-        <Dialog defaultOpen={true} onOpenChange={setShowUpgradeDialog}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle className="text-xl">Ready to unlock unlimited AI enhancements?</DialogTitle>
-              <DialogDescription className="text-base mt-4">
-                You've used your trial enhancement. Upgrade to Resume Pro to get:
-                <ul className="list-disc pl-6 mt-2 space-y-1">
-                  <li>Unlimited AI enhancements</li>
-                  <li>Advanced resume optimization</li>
-                  <li>Professional formatting</li>
-                  <li>ATS-friendly suggestions</li>
-                </ul>
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex justify-end gap-4 mt-6">
-              <Button variant="outline" onClick={() => setShowUpgradeDialog(false)}>
-                Maybe Later
-              </Button>
-              <Button 
-                onClick={() => {
-                  setShowUpgradeDialog(false);
-                  navigate('/pricing', { state: { highlightTier: 'resume_pro' } });
-                }}
-                className="bg-primary hover:bg-primary/90"
-              >
-                Upgrade Now
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <UpgradeDialog
+          isOpen={showUpgradeDialog}
+          onClose={() => setShowUpgradeDialog(false)}
+          feature="AI resume enhancement"
+          isTrialExpired={subscriptionStatus?.trials?.resume_creator?.remaining === 0}
+        />
       )}
 
       <div className="space-y-4">
