@@ -6,7 +6,8 @@ import { Alert, AlertDescription } from "./ui/alert";
 import { Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
-import { analyzeResume, ParsedResume } from "@/utils/openai";
+import { analyzeResumeAPI } from "@/api/openai";
+import { ParsedResume } from "@/interfaces/parsedResume";
 import { parseDocument } from "@/utils/documentParser";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useNavigate } from "react-router-dom";
@@ -43,6 +44,7 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
   const [isUploading, setIsUploading] = useState(false);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [shouldAnalyze, setShouldAnalyze] = useState(false);
+  const [analysis, setAnalysis] = useState<ResumeAnalysis | null>(null);
 
   useEffect(() => {
     if (savedResume) {
@@ -68,19 +70,6 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
       toast.info(`Resume "${savedResume.name}" loaded successfully`);
     }
   }, [savedResume]);
-
-  const {
-    data: analysis,
-    isLoading,
-    refetch,
-  } = useQuery<ResumeAnalysis>({
-    queryKey: ["resumeAnalysis", file?.name],
-    queryFn: async () => {
-      if (!parsedResume) return null;
-      return analyzeResume(parsedResume);
-    },
-    enabled: shouldAnalyze && !!parsedResume,
-  });
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -113,30 +102,38 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
     }
   };
 
-  const handleAnalyze = async () => {
-    if (!parsedResume) {
-      toast.error("Please upload a resume first");
+  const handleAnalyzeResume = async () => {
+    if (!auth.currentUser) {
+      toast.error("Please sign in to analyze your resume");
       return;
     }
-    
-    const userId = auth.currentUser?.uid;
-    if (!hasResumeProAccess && !hasCareerProAccess) {
-      setShowUpgradeDialog(true);
-      return;
+
+    if (subscriptionStatus?.trials?.resume_pro?.remaining !== undefined) {
+      if (subscriptionStatus.trials.resume_pro.remaining <= 0) {
+        setShowUpgradeDialog(true);
+        return;
+      }
+
+      try {
+        const success = await decrementTrialUse(auth.currentUser.uid, 'resume_pro');
+        if (!success) {
+          setShowUpgradeDialog(true);
+          return;
+        }
+      } catch (error) {
+        console.error('Error decrementing trial:', error);
+        setShowUpgradeDialog(true);
+        return;
+      }
     }
 
     try {
       setShouldAnalyze(true);
-      toast.info("Analyzing your resume...");
-      
-      // Decrement trial use if applicable
-      if (!hasResumeProAccess && !hasCareerProAccess && subscriptionStatus?.trials?.resume_pro?.remaining > 0) {
-        await decrementTrialUse(userId, 'resume_pro');
-      }
+      const result = await analyzeResumeAPI(auth.currentUser.uid, parsedResume);
+      setAnalysis(result);
     } catch (error) {
       console.error("Error analyzing resume:", error);
       toast.error("Failed to analyze resume. Please try again.");
-      setShouldAnalyze(false);
     }
   };
 
@@ -164,16 +161,11 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
                 disabled={isUploading}
               />
               <Button
-                onClick={handleAnalyze}
-                disabled={!parsedResume || isLoading || isUploading}
+                onClick={handleAnalyzeResume}
+                disabled={!parsedResume || isUploading}
                 className="w-full max-w-sm"
               >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Analyzing Resume...
-                  </>
-                ) : isUploading ? (
+                {isUploading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Processing...

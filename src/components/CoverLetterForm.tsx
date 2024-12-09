@@ -13,7 +13,8 @@ import { UpgradeDialog } from "./UpgradeDialog";
 import { CoverLetterFormProps } from "@/interfaces/coverLetterFormProps";
 import { saveCoverLetter } from "@/api/coverLetter";
 import { decrementTrialUse } from "@/api/subscription";
-import { generateCoverLetterWithAI, ParsedResume } from "@/utils/openai";
+import { generateCoverLetterAPI } from "@/api/openai";
+import { ParsedResume } from "@/interfaces/parsedResume";
 import { parseDocument } from "@/utils/documentParser";
 import { Upload } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -42,7 +43,7 @@ export const CoverLetterForm = ({ resume }: CoverLetterFormProps) => {
   const [parsedResume, setParsedResume] = useState<ParsedResume | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [resumeSource, setResumeSource] = useState<"upload" | "saved">(resume ? "saved" : "upload");
-  
+
   useEffect(() => {
     if ( !hasCareerProAccess) {
       navigate('/pricing');
@@ -103,53 +104,51 @@ export const CoverLetterForm = ({ resume }: CoverLetterFormProps) => {
     }
   };
 
-  const handleGenerate = async () => {
-    const userId = auth.currentUser?.uid;
-    const activeResume = resumeSource === "upload" ? parsedResume : resume?.data;
-
-    if (!activeResume) {
-      toast.error(resumeSource === "upload" 
-        ? "Please upload a resume first" 
-        : "Please select a saved resume first"
-      );
+  const handleGenerateCoverLetter = async () => {
+    if (!auth.currentUser) {
+      toast.error("Please sign in to generate a cover letter");
       return;
     }
 
-    if (!hasCareerProAccess) {
-      setShowUpgradeDialog(true);
+    if (!jobDescription) {
+      toast.error("Please enter a job description");
       return;
     }
 
-    if (!jobDescription && !jobUrl) {
-      toast.error("Please provide either a job description or URL");
+    if (!parsedResume && resumeSource === "upload" && !file) {
+      toast.error("Please upload your resume first");
       return;
+    }
+
+    if (subscriptionStatus?.trials?.career_pro?.remaining !== undefined) {
+      if (subscriptionStatus.trials.career_pro.remaining <= 0) {
+        setShowUpgradeDialog(true);
+        return;
+      }
+
+      try {
+        const success = await decrementTrialUse(auth.currentUser.uid, 'career_pro');
+        if (!success) {
+          setShowUpgradeDialog(true);
+          return;
+        }
+      } catch (error) {
+        console.error('Error decrementing trial:', error);
+        setShowUpgradeDialog(true);
+        return;
+      }
     }
 
     try {
       setIsGenerating(true);
-      toast.info("Generating your cover letter...");
-
-      // Decrement trial use if applicable
-      if (!hasCareerProAccess && subscriptionStatus?.trials?.career_pro?.remaining > 0) {
-        await decrementTrialUse(userId, 'career_pro');
-      }
-
-      const coverLetter = await generateCoverLetterWithAI(
-        activeResume,
+      const coverLetter = await generateCoverLetterAPI(
+        auth.currentUser.uid,
+        parsedResume,
         jobDescription,
         jobUrl
       );
       setGeneratedCoverLetter(coverLetter);
-      
-      if (coverLetter) {
-        await saveCoverLetter({
-          resumeId: resumeSource === "saved" ? resume?.id || 'uploaded' : 'uploaded',
-          content: coverLetter,
-          jobDescription,
-          jobUrl
-        });
-        toast.success("Cover letter generated and saved successfully!");
-      }
+      toast.success("Cover letter generated successfully!");
     } catch (error) {
       console.error("Error generating cover letter:", error);
       toast.error("Failed to generate cover letter. Please try again.");
@@ -243,7 +242,7 @@ export const CoverLetterForm = ({ resume }: CoverLetterFormProps) => {
             </div>
           </div>
           <Button
-            onClick={handleGenerate}
+            onClick={handleGenerateCoverLetter}
             className="w-full"
             disabled={isGenerating || isUploading || (!parsedResume && resumeSource === "upload")}
           >
