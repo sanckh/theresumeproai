@@ -25,7 +25,6 @@ export const getSubscriptionStatus = async (userId: string): Promise<Subscriptio
       throw new Error('Failed to get subscription status');
     }
     const data = await response.json();
-    console.log('Raw subscription data from API:', data);
     return data.subscription;
   } catch (error) {
     console.error('Error getting subscription status:', error);

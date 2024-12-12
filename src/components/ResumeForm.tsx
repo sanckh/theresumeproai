@@ -9,10 +9,10 @@ import { Plus, Wand2, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatPhoneNumber } from "@/utils/formatters";
 import { decrementTrialUse } from "@/api/subscription";
-import { auth } from "@/config/firebase";
 import { useNavigate } from "react-router-dom";
 import { UpgradeDialog } from "./UpgradeDialog";
 import { useSubscription } from "@/contexts/SubscriptionContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { ResumeContent } from "@/interfaces/resumeContent";
 import { EducationEntry } from "@/interfaces/educationEntry";
 import { JobEntry } from "@/interfaces/jobEntry";
@@ -24,13 +24,25 @@ export const ResumeForm = ({ data, onChange }: ResumeFormProps) => {
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const navigate = useNavigate();
   const { canUseFeature, subscriptionStatus } = useSubscription();
+  const { user } = useAuth();
+
+  // Ensure data has default values
+  const safeData = {
+    fullName: data?.fullName || "",
+    email: data?.email || "",
+    phone: data?.phone || "",
+    summary: data?.summary || "",
+    jobs: data?.jobs || [],
+    education: data?.education || [],
+    skills: data?.skills || ""
+  };
 
   const handleChange = (field: string, value: unknown) => {
     onChange(field, value);
   };
 
   const handleEducationChange = (index: number, field: keyof EducationEntry, value: string) => {
-    const newEducation = [...data.education];
+    const newEducation = [...safeData.education];
     newEducation[index] = { ...newEducation[index], [field]: value };
     handleChange("education", newEducation);
   };
@@ -42,16 +54,16 @@ export const ResumeForm = ({ data, onChange }: ResumeFormProps) => {
       startDate: "",
       endDate: "",
     };
-    handleChange("education", [...data.education, newEducation]);
+    handleChange("education", [...safeData.education, newEducation]);
   };
 
   const removeEducation = (index: number) => {
-    const newEducation = data.education.filter((_, i) => i !== index);
+    const newEducation = safeData.education.filter((_, i) => i !== index);
     handleChange("education", newEducation);
   };
 
   const handleJobChange = (index: number, field: keyof JobEntry, value: string) => {
-    const newJobs = [...data.jobs];
+    const newJobs = [...safeData.jobs];
     newJobs[index] = { ...newJobs[index], [field]: value };
     handleChange("jobs", newJobs);
   };
@@ -65,16 +77,16 @@ export const ResumeForm = ({ data, onChange }: ResumeFormProps) => {
       description: "",
       duties: [],
     };
-    handleChange("jobs", [...data.jobs, newJob]);
+    handleChange("jobs", [...safeData.jobs, newJob]);
   };
 
   const removeJob = (index: number) => {
-    const newJobs = data.jobs.filter((_, i) => i !== index);
+    const newJobs = safeData.jobs.filter((_, i) => i !== index);
     handleChange("jobs", newJobs);
   };
 
   const addDuty = (jobIndex: number) => {
-    const newJobs = [...data.jobs];
+    const newJobs = [...safeData.jobs];
     if (!newJobs[jobIndex].duties) {
       newJobs[jobIndex].duties = [];
     }
@@ -83,57 +95,91 @@ export const ResumeForm = ({ data, onChange }: ResumeFormProps) => {
   };
 
   const removeDuty = (jobIndex: number, dutyIndex: number) => {
-    const newJobs = [...data.jobs];
-    newJobs[jobIndex].duties = newJobs[jobIndex].duties?.filter((_, i) => i !== dutyIndex);
+    const newJobs = [...safeData.jobs];
+    if (!newJobs[jobIndex].duties) return;
+    newJobs[jobIndex].duties = newJobs[jobIndex].duties.filter((_, i) => i !== dutyIndex);
     handleChange("jobs", newJobs);
   };
 
   const handleDutyChange = (jobIndex: number, dutyIndex: number, value: string) => {
-    const newJobs = [...data.jobs];
-    if (newJobs[jobIndex].duties) {
-      newJobs[jobIndex].duties![dutyIndex] = value;
-      handleChange("jobs", newJobs);
-    }
+    const newJobs = [...safeData.jobs];
+    if (!newJobs[jobIndex].duties) return;
+    newJobs[jobIndex].duties[dutyIndex] = value;
+    handleChange("jobs", newJobs);
   };
 
   const handleEnhanceResume = async () => {
-    if (!auth.currentUser) {
-      toast.error("Please sign in to enhance your resume");
+    if (!user) {
+      navigate("/auth");
       return;
     }
 
-    if (subscriptionStatus?.trials?.resume_creator?.remaining !== undefined) {
-      if (subscriptionStatus.trials.resume_creator.remaining <= 0) {
-        setShowUpgradeDialog(true);
-        return;
-      }
-
+    // First check if user has the correct subscription
+    if (canUseFeature('resume_creator')) {
       try {
-        const success = await decrementTrialUse(auth.currentUser.uid, 'resume_creator');
-        if (!success) {
-          setShowUpgradeDialog(true);
-          return;
+        setIsEnhancing(true);
+        const enhancedData = await enhanceWithAIAPI(user.uid, safeData);
+        
+        if (enhancedData) {
+          handleChange("fullName", enhancedData.fullName);
+          handleChange("email", enhancedData.email);
+          handleChange("phone", enhancedData.phone);
+          handleChange("summary", enhancedData.summary);
+          handleChange("jobs", enhancedData.jobs);
+          handleChange("education", enhancedData.education);
+          handleChange("skills", enhancedData.skills);
+          
+          toast.success(
+            "Resume enhanced successfully! You can enhance again for further improvements, but changes may be subtle if your content is already well-optimized."
+          );
+        } else {
+          toast.error("No enhanced data received from the API");
         }
       } catch (error) {
-        console.error('Error decrementing trial:', error);
+        console.error("Error enhancing resume:", error);
+        toast.error("Failed to enhance resume");
+      } finally {
+        setIsEnhancing(false);
+      }
+      return;
+    }
+
+    // If no subscription, check for trials
+    if (!subscriptionStatus?.trials?.resume_creator?.remaining || 
+        subscriptionStatus.trials.resume_creator.remaining <= 0) {
+      setShowUpgradeDialog(true);
+      return;
+    }
+
+    // Has trials remaining, try to decrement
+    try {
+      const success = await decrementTrialUse(user.uid, 'resume_creator');
+      if (!success) {
         setShowUpgradeDialog(true);
         return;
       }
-    }
 
-    try {
       setIsEnhancing(true);
-      const enhancedResume = await enhanceWithAIAPI(auth.currentUser.uid, data);
+      const enhancedData = await enhanceWithAIAPI(user.uid, safeData);
       
-      if (enhancedResume) {
-        handleChange("jobs", enhancedResume.jobs);
-        handleChange("summary", enhancedResume.summary);
-        handleChange("skills", enhancedResume.skills);
-        toast.success("Resume enhanced successfully!");
+      if (enhancedData) {
+        handleChange("fullName", enhancedData.fullName);
+        handleChange("email", enhancedData.email);
+        handleChange("phone", enhancedData.phone);
+        handleChange("summary", enhancedData.summary);
+        handleChange("jobs", enhancedData.jobs);
+        handleChange("education", enhancedData.education);
+        handleChange("skills", enhancedData.skills);
+        
+        toast.success(
+          "Resume enhanced successfully! You can enhance again for further improvements, but changes may be subtle if your content is already well-optimized."
+        );
+      } else {
+        toast.error("No enhanced data received from the API");
       }
     } catch (error) {
       console.error("Error enhancing resume:", error);
-      toast.error("Failed to enhance resume. Please try again.");
+      toast.error("Failed to enhance resume");
     } finally {
       setIsEnhancing(false);
     }
@@ -171,7 +217,7 @@ export const ResumeForm = ({ data, onChange }: ResumeFormProps) => {
           <Input
             id="fullName"
             name="fullName"
-            value={data.fullName}
+            value={safeData.fullName}
             onChange={(e) => handleChange("fullName", e.target.value)}
             placeholder="John Doe"
           />
@@ -182,7 +228,7 @@ export const ResumeForm = ({ data, onChange }: ResumeFormProps) => {
             id="email"
             name="email"
             type="email"
-            value={data.email}
+            value={safeData.email}
             onChange={(e) => handleChange("email", e.target.value)}
             placeholder="john@example.com"
           />
@@ -192,7 +238,7 @@ export const ResumeForm = ({ data, onChange }: ResumeFormProps) => {
           <Input
             id="phone"
             name="phone"
-            value={data.phone}
+            value={safeData.phone}
             onChange={(e) => handleChange("phone", formatPhoneNumber(e.target.value))}
             placeholder="+1 (555) 000-0000"
           />
@@ -203,7 +249,7 @@ export const ResumeForm = ({ data, onChange }: ResumeFormProps) => {
           <Textarea
             id="summary"
             name="summary"
-            value={data.summary}
+            value={safeData.summary}
             onChange={(e) => handleChange("summary", e.target.value)}
             placeholder="Brief overview of your professional background - our AI will help make it impactful"
             className="h-32"
@@ -225,7 +271,7 @@ export const ResumeForm = ({ data, onChange }: ResumeFormProps) => {
             </Button>
           </div>
           <div className="space-y-6">
-            {data.jobs.map((job, jobIndex) => (
+            {safeData.jobs.map((job, jobIndex) => (
               <Card key={jobIndex} className="p-4 mb-4">
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
@@ -336,7 +382,7 @@ export const ResumeForm = ({ data, onChange }: ResumeFormProps) => {
             </Button>
           </div>
           <div className="space-y-6">
-            {data.education.map((edu, index) => (
+            {safeData.education.map((edu, index) => (
               <EducationExperience
                 key={index}
                 index={index}
@@ -353,7 +399,7 @@ export const ResumeForm = ({ data, onChange }: ResumeFormProps) => {
           <Textarea
             id="skills"
             name="skills"
-            value={data.skills}
+            value={safeData.skills}
             onChange={(e) => handleChange("skills", e.target.value)}
             placeholder="List your key skills - our AI will organize and highlight the most relevant ones"
             className="h-32"

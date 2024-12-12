@@ -12,7 +12,7 @@ import { parseDocument } from "@/utils/documentParser";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useNavigate } from "react-router-dom";
 import { decrementTrialUse } from "@/api/subscription";
-import { auth } from "@/config/firebase";
+import { useAuth } from "@/contexts/AuthContext";
 import { UpgradeDialog } from "./UpgradeDialog";
 import { ResumeData } from "@/interfaces/resumeData";
 import { ResumeAnalysis } from "@/interfaces/resumeAnalysis";
@@ -29,6 +29,7 @@ const SUPPORTED_FILE_TYPES = {
 export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
   const { canUseFeature, subscriptionStatus } = useSubscription();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const hasResumeProAccess = canUseFeature('resume_pro');
   const hasCareerProAccess = canUseFeature('career_pro');
 
@@ -79,7 +80,10 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
           setIsUploading(true);
           setFile(selectedFile);
           setShouldAnalyze(false); 
-          const parsed = await parseDocument(selectedFile);
+          if (!user?.uid) {
+            throw new Error("User not authenticated");
+          }
+          const parsed = await parseDocument(selectedFile, user.uid);
           setParsedResume(parsed);
 
           toast.success(`${selectedFile.name} uploaded successfully!`);
@@ -103,37 +107,47 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
   };
 
   const handleAnalyzeResume = async () => {
-    if (!auth.currentUser) {
+    if (!user?.uid) {
       toast.error("Please sign in to analyze your resume");
       return;
     }
 
-    if (subscriptionStatus?.trials?.resume_pro?.remaining !== undefined) {
-      if (subscriptionStatus.trials.resume_pro.remaining <= 0) {
-        setShowUpgradeDialog(true);
-        return;
-      }
-
+    // First check if user has the correct subscription
+    if (hasResumeProAccess || hasCareerProAccess) {
       try {
-        const success = await decrementTrialUse(auth.currentUser.uid, 'resume_pro');
-        if (!success) {
-          setShowUpgradeDialog(true);
-          return;
-        }
+        setShouldAnalyze(true);
+        const result = await analyzeResumeAPI(user.uid, parsedResume);
+        setAnalysis(result);
+        toast.success("Resume analysis completed!");
       } catch (error) {
-        console.error('Error decrementing trial:', error);
-        setShowUpgradeDialog(true);
-        return;
+        console.error("Error analyzing resume:", error);
+        toast.error("Failed to analyze resume");
       }
+      return;
     }
 
+    // If no subscription, check for trials
+    if (!subscriptionStatus?.trials?.resume_pro?.remaining || 
+        subscriptionStatus.trials.resume_pro.remaining <= 0) {
+      setShowUpgradeDialog(true);
+      return;
+    }
+
+    // Has trials remaining, try to decrement
     try {
+      const success = await decrementTrialUse(user.uid, 'resume_pro');
+      if (!success) {
+        setShowUpgradeDialog(true);
+        return;
+      }
+
       setShouldAnalyze(true);
-      const result = await analyzeResumeAPI(auth.currentUser.uid, parsedResume);
+      const result = await analyzeResumeAPI(user.uid, parsedResume);
       setAnalysis(result);
+      toast.success("Resume analysis completed!");
     } catch (error) {
       console.error("Error analyzing resume:", error);
-      toast.error("Failed to analyze resume. Please try again.");
+      toast.error("Failed to analyze resume");
     }
   };
 

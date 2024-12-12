@@ -1,31 +1,12 @@
 import { Card } from "./ui/card";
 import { formatPhoneNumber } from "@/utils/formatters";
-import { useSubscription } from "@/contexts/SubscriptionContext";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Button } from "./ui/button";
 import { useNavigate } from "react-router-dom";
 import { ResumePreviewProps } from "@/interfaces/resumePreviewProps";
 
 export const ResumePreview = ({ data, template = "modern" }: ResumePreviewProps) => {
-  const { canUseFeature } = useSubscription();
-  const navigate = useNavigate();
 
-  if (!canUseFeature('resume_creator')) {
-    return (
-      <Alert>
-        <AlertDescription>
-          You need to upgrade your subscription to use this feature.
-          <Button
-            variant="link"
-            className="pl-2"
-            onClick={() => navigate('/pricing')}
-          >
-            View Plans
-          </Button>
-        </AlertDescription>
-      </Alert>
-    );
-  }
 
   if (!data?.data) {
     return (

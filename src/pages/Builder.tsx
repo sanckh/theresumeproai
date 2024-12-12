@@ -17,7 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Save, ChevronDown, Edit2 } from "lucide-react";
+import { Save, ChevronDown, Edit2, Loader2, FileText } from "lucide-react";
 import { getAllResumes, getResume, saveResume } from "@/api/resume";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
@@ -26,7 +26,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ResumeData } from "@/interfaces/resumeData";
 import { JobEntry } from "@/interfaces/jobEntry";
 import { EducationEntry } from "@/interfaces/educationEntry";
-import { CoverLetterForm } from "@/components/CoverLetterForm";
+import CoverLetterForm from "@/components/CoverLetterForm";
 
 const STORAGE_KEY = "saved_resume";
 
@@ -124,14 +124,21 @@ const Builder = () => {
     }
   }, [user, currentResumeName]);
 
-  const handleChange = (field: string, value: unknown) => {
-    setResumeData(prev => ({
-      ...prev,
-      data: {
+  const handleChange = (field: keyof ResumeData['data'], value: unknown) => {
+    setResumeData(prev => {
+      // Create a new data object with the updated field
+      const newData = {
         ...prev.data,
         [field]: value
-      }
-    }));
+      };
+
+      // Return the complete ResumeData structure
+      return {
+        ...prev,
+        data: newData,
+        updated_at: new Date().toISOString()
+      };
+    });
   };
 
   const loadResume = async (id: string) => {
@@ -286,10 +293,23 @@ const Builder = () => {
           </div>
 
           <div className="flex items-center gap-4">
+            <Button 
+              variant="outline" 
+              className="flex items-center gap-2"
+              onClick={handleSaveResume}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )}
+              Save
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="flex items-center gap-2">
-                  <Save className="h-4 w-4" />
+                  <FileText className="h-4 w-4" />
                   {currentResumeId ? currentResumeName : (savedResumes.length > 0 ? "Select Resume" : "Create New")}
                   <ChevronDown className="h-4 w-4" />
                 </Button>
@@ -346,10 +366,20 @@ const Builder = () => {
               <TabsTrigger value="cover-letter">Cover Letter</TabsTrigger>
             </TabsList>
             <TabsContent value="builder" className="space-y-4">
-              <div className="grid grid-cols-2 gap-6">
-                <ResumeForm data={resumeData.data} onChange={handleChange} />
-                <div className="sticky top-4">
-                  <ResumePreview data={resumeData} template={selectedTemplate} />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-6">
+                  <ResumeForm
+                    data={resumeData.data}
+                    onChange={handleChange}
+                  />
+                </div>
+                <div className="space-y-6">
+                  <div ref={resumeRef}>
+                    <ResumePreview
+                      data={resumeData}
+                      template={selectedTemplate}
+                    />
+                  </div>
                 </div>
               </div>
             </TabsContent>

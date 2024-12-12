@@ -2,13 +2,21 @@ const API_URL = import.meta.env.VITE_API_URL;
 
 import { ParsedResume } from "@/interfaces/parsedResume";
 import { ResumeData } from "@/interfaces/resumeData";
+import { auth } from "@/config/firebase";
+
+const getAuthHeader = async () => {
+  const token = await auth.currentUser?.getIdToken();
+  return { Authorization: `Bearer ${token}` };
+};
 
 export const parseResumeAPI = async (userId: string, resumeText: string): Promise<ParsedResume> => {
   try {
+    const headers = await getAuthHeader();
     const response = await fetch(`${API_URL}/ai/parse-resume/${userId}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...headers,
       },
       credentials: 'include',
       body: JSON.stringify({ resumeText }),
@@ -34,10 +42,12 @@ export const analyzeResumeAPI = async (
   strengths: string[];
 }> => {
   try {
+    const headers = await getAuthHeader();
     const response = await fetch(`${API_URL}/ai/analyze-resume/${userId}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...headers,
       },
       credentials: 'include',
       body: JSON.stringify({ resumeData }),
@@ -56,10 +66,12 @@ export const analyzeResumeAPI = async (
 
 export const enhanceWithAIAPI = async (userId: string, resumeData: ResumeData["data"]) => {
   try {
+    const headers = await getAuthHeader();
     const response = await fetch(`${API_URL}/ai/enhance-resume/${userId}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...headers,
       },
       credentials: 'include',
       body: JSON.stringify({ resumeData }),
@@ -85,10 +97,12 @@ export const classifyResumeSectionAPI = async (
   confidence: number;
 }> => {
   try {
+    const headers = await getAuthHeader();
     const response = await fetch(`${API_URL}/ai/classify-section/${userId}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...headers,
       },
       credentials: 'include',
       body: JSON.stringify({ text, context }),
@@ -112,10 +126,12 @@ export const generateCoverLetterAPI = async (
   jobUrl?: string
 ): Promise<string> => {
   try {
+    const headers = await getAuthHeader();
     const response = await fetch(`${API_URL}/ai/generate-cover-letter/${userId}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...headers,
       },
       credentials: 'include',
       body: JSON.stringify({ resumeData, jobDescription, jobUrl }),

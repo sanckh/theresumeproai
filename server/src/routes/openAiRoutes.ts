@@ -6,7 +6,7 @@ import {
   enhanceResume,
   classifySection,
   generateCoverLetter
-} from '../controllers/openAIController';
+} from '../controllers/openAiController';
 
 const router = express.Router();
 

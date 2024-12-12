@@ -1,4 +1,3 @@
-
 import OpenAI from "openai";
 import dotenv from 'dotenv';
 import { ParsedResume } from "../interfaces/parsedResume";
@@ -158,6 +157,7 @@ Suggestions:
 - [suggestion 2]
 ...`;
 
+
         const formatSection = (
             name: string,
             content: string | Record<string, ExperienceDetails>
@@ -241,72 +241,87 @@ export const enhanceResumeService = async (resumeData: ResumeData["data"]) => {
     }
 
     try {
-        const systemPrompt = `You are a professional resume writer tasked with enhancing resume content. Focus on:
-
-1. Making achievements more impactful by:
-   - Adding specific metrics and numbers
-   - Using strong action verbs
-   - Highlighting business impact
-   - Quantifying results where possible
-
-2. Improving clarity and conciseness by:
-   - Removing redundant information
-   - Making sentences more direct
-   - Using industry-standard terminology
-   - Maintaining professional tone
-
-3. Enhancing technical content by:
-   - Using current industry terminology
-   - Highlighting relevant technologies
-   - Emphasizing technical achievements
-   - Including version numbers where relevant
-
-Respond with enhanced content only. Do not include explanations or formatting instructions.`;
-
-        const formatSkills = (skills: string | string[]): string => {
-            if (Array.isArray(skills)) {
-                return skills.join(", ");
-            }
-            return skills;
-        };
-
-        const userMessage = `Original Resume Content:
-
-${Object.entries(resumeData)
-                .map(([section, content]) => {
-                    if (section === "skills") {
-                        return `=== ${section} ===\n${formatSkills(content)}`;
-                    }
-                    return `=== ${section} ===\n${content}`;
-                })
-                .join("\n\n")}`;
-
-        const response = await openai.chat.completions.create({
+        const completion = await openai.chat.completions.create({
             model: "gpt-4",
             messages: [
-                { role: "system", content: systemPrompt },
-                { role: "user", content: userMessage },
+                { 
+                    role: "system",
+                    content: `You are a professional resume writer tasked with enhancing resume content. Focus on improving the existing content without inventing new information. Your task is to:
+
+                     1. Work with whatever information is provided:
+                        - If a section is empty or missing, preserve it as empty
+                        - Focus on enhancing only the sections that have content
+                        - Do not invent or add information that isn't present
+                     
+                     2. Make existing content more impactful by:
+                        - Using stronger action verbs
+                        - Improving sentence structure and clarity
+                        - Making descriptions more professional
+                        - Enhancing readability and impact
+                     
+                     3. Preserve factual information:
+                        - Keep all dates, names, and contact information exactly as provided
+                        - Don't add fictional achievements or experiences
+                        - Only enhance the writing style and impact of existing content
+
+                    IMPORTANT: Your response must be valid JSON matching this exact structure:
+                    {
+                        "fullName": "string",
+                        "email": "string",
+                        "phone": "string",
+                        "summary": "string",
+                        "jobs": [],
+                        "education": [],
+                        "skills": "string"
+                    }
+
+                    If a field is empty in the input, keep it empty in the output.
+                    Focus only on improving the writing of sections that have content.`
+                },
+                { role: "user",
+                  content: JSON.stringify(resumeData) 
+                },
             ],
             temperature: 0.7,
         });
 
-        const enhancedContent = response.choices[0].message?.content;
+        const enhancedContent = completion.choices[0].message?.content;
 
         if (!enhancedContent) {
             throw new Error("No response from OpenAI");
         }
 
-        const sections = enhancedContent.split("===").filter(Boolean);
-        const enhancedData: { [key: string]: any } = {};
-
-        for (const section of sections) {
-            const lines = section.trim().split("\n");
-            const sectionName = lines[0].trim().toLowerCase();
-            const content = lines.slice(1).join("\n").trim();
-            enhancedData[sectionName] = content;
+        let parsedContent;
+        try {
+            parsedContent = JSON.parse(enhancedContent);
+        } catch (error) {
+            console.error("Failed to parse OpenAI response:", error);
+            throw new Error("Invalid response format from OpenAI");
         }
 
-        return enhancedData;
+        // Ensure all required fields exist with defaults, preserving original if enhanced version is empty
+        const enhancedResume = {
+            fullName: parsedContent.fullName || resumeData.fullName || "",
+            email: parsedContent.email || resumeData.email || "",
+            phone: parsedContent.phone || resumeData.phone || "",
+            summary: parsedContent.summary || resumeData.summary || "",
+            jobs: Array.isArray(parsedContent.jobs) ? parsedContent.jobs.map((job: any) => ({
+                title: job.title || "",
+                company: job.company || "",
+                startDate: job.startDate || "",
+                endDate: job.endDate || "",
+                description: job.description || "",
+                duties: Array.isArray(job.duties) ? job.duties : []
+            })) : resumeData.jobs || [],
+            education: Array.isArray(parsedContent.education) ? parsedContent.education.map((edu: any) => ({
+                institution: edu.institution || "",
+                degree: edu.degree || "",
+                startDate: edu.startDate || "",
+                endDate: edu.endDate || ""
+            })) : resumeData.education || [],
+            skills: parsedContent.skills || resumeData.skills || ""
+        };
+        return enhancedResume;
     } catch (error) {
         console.error("Error enhancing resume with OpenAI:", error);
         throw error;
@@ -453,4 +468,16 @@ ${jobUrl || "No job URL provided"}`;
         console.error("Error generating cover letter with OpenAI:", error);
         throw error;
     }
+};
+
+const formatSkills = (skills: string | string[]): string => {
+    if (Array.isArray(skills)) {
+        return skills.map((skill) => skill.trim()).join(", ");
+    }
+
+    return skills
+        .split(/(?<!\w),(?!\w)|\n+/)
+        .map((skill) => skill.trim())
+        .filter((skill) => skill.length > 0)
+        .join(", ");
 };

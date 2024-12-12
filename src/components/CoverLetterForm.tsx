@@ -7,6 +7,7 @@ import { Label } from "./ui/label";
 import { toast } from "sonner";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { auth } from "@/config/firebase";
 import { Loader2, Wand2 } from "lucide-react";
 import { UpgradeDialog } from "./UpgradeDialog";
@@ -29,9 +30,10 @@ const SUPPORTED_FILE_TYPES = {
   "text/plain": "TXT",
 } as const;
 
-export const CoverLetterForm = ({ resume }: CoverLetterFormProps) => {
+export default function CoverLetterForm({ resume }: CoverLetterFormProps) {
   const { canUseFeature, subscriptionStatus } = useSubscription();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const hasCareerProAccess = canUseFeature('career_pro');
 
   const [jobDescription, setJobDescription] = useState("");
@@ -80,7 +82,10 @@ export const CoverLetterForm = ({ resume }: CoverLetterFormProps) => {
         try {
           setIsUploading(true);
           setFile(selectedFile);
-          const parsed = await parseDocument(selectedFile);
+          if (!user?.uid) {
+            throw new Error("User not authenticated");
+          }
+          const parsed = await parseDocument(selectedFile, user.uid);
           setParsedResume(parsed);
 
           toast.success(`${selectedFile.name} uploaded successfully!`);
@@ -105,7 +110,7 @@ export const CoverLetterForm = ({ resume }: CoverLetterFormProps) => {
   };
 
   const handleGenerateCoverLetter = async () => {
-    if (!auth.currentUser) {
+    if (!user?.uid) {
       toast.error("Please sign in to generate a cover letter");
       return;
     }
@@ -120,29 +125,45 @@ export const CoverLetterForm = ({ resume }: CoverLetterFormProps) => {
       return;
     }
 
-    if (subscriptionStatus?.trials?.career_pro?.remaining !== undefined) {
-      if (subscriptionStatus.trials.career_pro.remaining <= 0) {
-        setShowUpgradeDialog(true);
-        return;
-      }
-
+    // First check if user has the correct subscription
+    if (hasCareerProAccess) {
       try {
-        const success = await decrementTrialUse(auth.currentUser.uid, 'career_pro');
-        if (!success) {
-          setShowUpgradeDialog(true);
-          return;
-        }
+        setIsGenerating(true);
+        const coverLetter = await generateCoverLetterAPI(
+          user.uid,
+          parsedResume,
+          jobDescription,
+          jobUrl
+        );
+        setGeneratedCoverLetter(coverLetter);
+        toast.success("Cover letter generated successfully!");
       } catch (error) {
-        console.error('Error decrementing trial:', error);
-        setShowUpgradeDialog(true);
-        return;
+        console.error("Error generating cover letter:", error);
+        toast.error("Failed to generate cover letter");
+      } finally {
+        setIsGenerating(false);
       }
+      return;
     }
 
+    // If no subscription, check for trials
+    if (!subscriptionStatus?.trials?.career_pro?.remaining || 
+        subscriptionStatus.trials.career_pro.remaining <= 0) {
+      setShowUpgradeDialog(true);
+      return;
+    }
+
+    // Has trials remaining, try to decrement
     try {
+      const success = await decrementTrialUse(user.uid, 'career_pro');
+      if (!success) {
+        setShowUpgradeDialog(true);
+        return;
+      }
+
       setIsGenerating(true);
       const coverLetter = await generateCoverLetterAPI(
-        auth.currentUser.uid,
+        user.uid,
         parsedResume,
         jobDescription,
         jobUrl
@@ -151,7 +172,7 @@ export const CoverLetterForm = ({ resume }: CoverLetterFormProps) => {
       toast.success("Cover letter generated successfully!");
     } catch (error) {
       console.error("Error generating cover letter:", error);
-      toast.error("Failed to generate cover letter. Please try again.");
+      toast.error("Failed to generate cover letter");
     } finally {
       setIsGenerating(false);
     }

@@ -1,10 +1,12 @@
 import * as pdfjs from "pdfjs-dist";
 import mammoth from "mammoth";
-import { parseResumeWithOpenAI, ParsedResume } from "./openai";
+import { ParsedResume } from "@/interfaces/parsedResume";
+import { parseResumeAPI } from "@/api/openai";
 
 // Initialize PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.worker.mjs`;
-export async function parseDocument(file: File): Promise<ParsedResume> {
+
+export async function parseDocument(file: File, userId: string): Promise<ParsedResume> {
   const fileType = file.type;
   let textContent = "";
 
@@ -22,8 +24,7 @@ export async function parseDocument(file: File): Promise<ParsedResume> {
       throw new Error(`Unsupported file type: ${fileType}`);
   }
 
-  // Call OpenAI to parse the resume into sections
-  const parsedResume = await parseResumeWithOpenAI(textContent);
+  const parsedResume = await parseResumeAPI(userId, textContent);
   return parsedResume;
 }
 
