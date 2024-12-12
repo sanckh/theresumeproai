@@ -4,12 +4,35 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
-import { CreditCard, User } from "lucide-react";
+import { CreditCard, User, Bug } from "lucide-react";
 import { CancelSubscriptionDialog } from '@/components/CancelSubscriptionDialog';
+import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { reportBug } from "@/api/bug";
 
 const Settings = () => {
   const { user } = useAuth();
   const { subscriptionStatus, loading } = useSubscription();
+  const [bugReportOpen, setBugReportOpen] = useState(false);
+  const [bugReport, setBugReport] = useState({ title: "", description: "" });
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleBugReport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await reportBug(bugReport.title, bugReport.description);
+      setBugReportOpen(false);
+      setBugReport({ title: "", description: "" });
+    } catch (error) {
+      console.error("Failed to submit bug report:", error);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (!user) {
     return (
@@ -50,6 +73,17 @@ const Settings = () => {
               Subscription
             </TabsTrigger>
           </TabsList>
+
+          <div className="flex justify-end mb-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setBugReportOpen(true)}
+              className="flex items-center gap-2"
+            >
+              <Bug className="h-4 w-4" />
+              Report a bug
+            </Button>
+          </div>
 
           <TabsContent value="profile">
             <Card className="p-6">
@@ -116,6 +150,48 @@ const Settings = () => {
             </Card>
           </TabsContent>
         </Tabs>
+
+        <Dialog open={bugReportOpen} onOpenChange={setBugReportOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Report a Bug</DialogTitle>
+              <DialogDescription>
+                Help us improve by reporting any issues you encounter.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleBugReport} className="space-y-4">
+              <div>
+                <Label htmlFor="title">Title</Label>
+                <Input
+                  id="title"
+                  value={bugReport.title}
+                  onChange={(e) => setBugReport(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="Brief description of the issue"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={bugReport.description}
+                  onChange={(e) => setBugReport(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Please provide details about what happened and steps to reproduce the issue"
+                  className="h-32"
+                  required
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setBugReportOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={submitting}>
+                  {submitting ? "Submitting..." : "Submit"}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
