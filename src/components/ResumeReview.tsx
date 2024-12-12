@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Input } from "./ui/input";
@@ -32,9 +32,9 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
   const { user } = useAuth();
   const hasResumeProAccess = canUseFeature('resume_pro');
   const hasCareerProAccess = canUseFeature('career_pro');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // User should have access if they have either Resume Pro or Career Pro
     if (!hasResumeProAccess && !hasCareerProAccess) {
       navigate('/pricing');
     }
@@ -49,6 +49,10 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
 
   useEffect(() => {
     if (savedResume) {
+      setFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
       const parsed: ParsedResume = {
         sections: {
           "Personal Information": `${savedResume.data.fullName}\n${savedResume.data.email}\n${savedResume.data.phone}`,
@@ -68,6 +72,7 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
       };
       setParsedResume(parsed);
       setShouldAnalyze(false);
+      setAnalysis(null);
       toast.info(`Resume "${savedResume.name}" loaded successfully`);
     }
   }, [savedResume]);
@@ -80,6 +85,7 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
           setIsUploading(true);
           setFile(selectedFile);
           setShouldAnalyze(false); 
+          setAnalysis(null);
           if (!user?.uid) {
             throw new Error("User not authenticated");
           }
@@ -112,7 +118,6 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
       return;
     }
 
-    // First check if user has the correct subscription
     if (hasResumeProAccess || hasCareerProAccess) {
       try {
         setShouldAnalyze(true);
@@ -126,14 +131,12 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
       return;
     }
 
-    // If no subscription, check for trials
     if (!subscriptionStatus?.trials?.resume_pro?.remaining || 
         subscriptionStatus.trials.resume_pro.remaining <= 0) {
       setShowUpgradeDialog(true);
       return;
     }
 
-    // Has trials remaining, try to decrement
     try {
       const success = await decrementTrialUse(user.uid, 'resume_pro');
       if (!success) {
@@ -164,11 +167,11 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
           <div className="flex flex-col gap-2">
             <h2 className="text-lg font-semibold">Upload Your Resume</h2>
             <p className="text-sm text-gray-500">
-              Supported formats:{" "}
-              {Object.values(SUPPORTED_FILE_TYPES).join(", ")}
+              Supported formats: {Object.values(SUPPORTED_FILE_TYPES).join(", ")}
             </p>
             <div className="flex gap-4">
               <Input
+                ref={fileInputRef}
                 type="file"
                 onChange={handleFileChange}
                 accept={Object.keys(SUPPORTED_FILE_TYPES).join(",")}
