@@ -83,16 +83,27 @@ const Builder = () => {
 
       try {
         const resumes = await getAllResumes(user.uid);
-        // Convert ResumeData[] to SavedResume[]
-        const savedResumesList: SavedResume[] = resumes.map((resume) => ({
-          id: resume.id || "",
-          user_id: resume.user_id,
-          name: resume.name,
-          data: resume.data,
-          created_at: resume.created_at || new Date().toISOString(),
-          updated_at: resume.updated_at || new Date().toISOString(),
-        }));
+        // Convert ResumeData[] to SavedResume[] and sort by updated_at
+        const savedResumesList: SavedResume[] = resumes
+          .map((resume) => ({
+            id: resume.id || "",
+            user_id: resume.user_id,
+            name: resume.name,
+            data: resume.data,
+            created_at: resume.created_at || new Date().toISOString(),
+            updated_at: resume.updated_at || new Date().toISOString(),
+          }))
+          .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+
         setSavedResumes(savedResumesList);
+        
+        // Automatically load the most recent resume if available
+        if (savedResumesList.length > 0) {
+          const mostRecent = savedResumesList[0];
+          setCurrentResumeId(mostRecent.id);
+          setCurrentResumeName(mostRecent.name);
+          await loadResume(mostRecent.id);
+        }
       } catch (error) {
         console.error("Error loading resumes:", error);
         toast.error("Failed to load saved resumes");
