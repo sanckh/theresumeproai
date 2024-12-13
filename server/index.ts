@@ -31,6 +31,11 @@ const apiLimiter = rateLimit({
 const allowedOrigins = [
   'http://localhost:8081',
   'http://localhost:8080',
+  'https://theresumeproai-dev.web.app',
+  'https://theresumeproai-prod.web.app',
+  'https://theresumeproai-dev.firebaseapp.com',
+  'https://theresumeproai-prod.firebaseapp.com',
+  'https://theresumeproai.com',
 ];
 
 // Use Parameters utility to infer CORS options type
