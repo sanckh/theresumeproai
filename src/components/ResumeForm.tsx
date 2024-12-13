@@ -18,6 +18,9 @@ import { EducationEntry } from "@/interfaces/educationEntry";
 import { JobEntry } from "@/interfaces/jobEntry";
 import { ResumeFormProps } from "@/interfaces/resumeFormProps";
 import { enhanceWithAIAPI } from "@/api/openai";
+import { analytics } from '../config/firebase';
+import { logEvent } from 'firebase/analytics';
+import { getSubscriptionStatus } from '@/api/subscription';
 
 export const ResumeForm = ({ data, onChange }: ResumeFormProps) => {
   const [isEnhancing, setIsEnhancing] = useState(false);
@@ -112,6 +115,14 @@ export const ResumeForm = ({ data, onChange }: ResumeFormProps) => {
     if (!user) {
       navigate("/auth");
       return;
+    }
+
+    if (analytics) {
+      const subscription_type = subscriptionStatus?.tier || 'FREE';
+      logEvent(analytics, 'enhance_resume_clicked', {
+        subscription_type,
+        has_existing_content: Boolean(safeData.summary || safeData.jobs.length || safeData.education.length)
+      });
     }
 
     // First check if user has the correct subscription

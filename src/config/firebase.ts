@@ -1,5 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, connectAuthEmulator } from 'firebase/auth';
+import { getAnalytics, isSupported } from 'firebase/analytics';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -15,10 +16,20 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
+//Analytics
+let analytics = null;
+if (import.meta.env.PROD) {
+  isSupported().then(supported => {
+    if (supported) {
+      analytics = getAnalytics(app);
+    }
+  });
+}
+
 // Connect to Auth Emulator if VITE_USE_FIREBASE_EMULATOR is set to 'true'
 if (import.meta.env.VITE_USE_FIREBASE_EMULATOR === 'true') {
   console.log('🔧 Using Firebase Auth Emulator');
   connectAuthEmulator(auth, 'http://localhost:9099');
 }
 
-export { auth };
+export { auth, analytics };
