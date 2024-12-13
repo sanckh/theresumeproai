@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-import { getAuth } from 'firebase/auth';
 import admin from 'firebase-admin';
 import dotenv from 'dotenv';
 import fs from 'fs';
