@@ -56,7 +56,7 @@ ${resumeText}
 \`\`\``;
 
         const response = await openai?.chat.completions.create({
-            model: "gpt-3.5-turbo",
+            model: "gpt-4o",
             messages: [
                 { role: "system", content: systemPrompt },
                 { role: "user", content: userMessage },
@@ -183,7 +183,7 @@ ${Object.entries(parsedResume.sections)
                 .join("\n\n")}`;
 
         const response = await openai.chat.completions.create({
-            model: "gpt-3.5-turbo",
+            model: "gpt-4o",
             messages: [
                 { role: "system", content: systemPrompt },
                 { role: "user", content: userMessage },
@@ -242,7 +242,7 @@ export const enhanceResumeService = async (resumeData: ResumeData["data"]) => {
 
     try {
         const completion = await openai.chat.completions.create({
-            model: "gpt-4",
+            model: "gpt-4o",
             messages: [
                 { 
                     role: "system",
@@ -375,7 +375,7 @@ Context (if any):
 ${context || "No additional context provided"}`;
 
         const response = await openai.chat.completions.create({
-            model: "gpt-3.5-turbo",
+            model: "gpt-4o",
             messages: [
                 { role: "system", content: systemPrompt },
                 { role: "user", content: userMessage },
@@ -449,7 +449,7 @@ Job URL:
 ${jobUrl || "No job URL provided"}`;
 
         const response = await openai.chat.completions.create({
-            model: "gpt-4",
+            model: "gpt-4o",
             messages: [
                 { role: "system", content: systemPrompt },
                 { role: "user", content: userMessage },
