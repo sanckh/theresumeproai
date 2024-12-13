@@ -1,4 +1,4 @@
-import { SubscriptionTier } from "../../types/subscription";
+import { SubscriptionTier } from "../enums/subscriptionTier";
 
 export interface CreateSubscriptionData {
     tier: SubscriptionTier;

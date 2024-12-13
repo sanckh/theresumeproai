@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import admin from 'firebase-admin';
 import dotenv from 'dotenv';
@@ -45,9 +44,8 @@ admin.initializeApp({
 });
 
 // Initialize Firebase App
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
+const app = admin.initializeApp(firebaseConfig);
 const db = admin.firestore();
 const bucket = admin.storage().bucket();
 
-export { app, auth, db, bucket };
+export { app, db, bucket };
