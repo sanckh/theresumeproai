@@ -1,5 +1,18 @@
 {
   "projects": {
     "default": "theresumeproai"
-  }
+  },
+  "targets": {
+    "theresumeproai": {
+      "hosting": {
+        "development": [
+          "theresumeproai-dev"
+        ],
+        "production": [
+          "theresumeproai-prod"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

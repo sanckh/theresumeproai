@@ -1,4 +1,16 @@
 {
+  "hosting": [
+    {
+      "target": "production",
+      "public": "dist/prod",
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"]
+    },
+    {
+      "target": "development",
+      "public": "dist/dev",
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"]
+    }
+  ],
   "emulators": {
     "singleProjectMode": true,
     "auth": {

@@ -26,3 +26,6 @@ dist-ssr
 src/serviceAccountKey.json
 server/src/serviceAccountKey.json
 server/serviceAccountKey.json
+src/.env.development
+.env.production
+.env.development
