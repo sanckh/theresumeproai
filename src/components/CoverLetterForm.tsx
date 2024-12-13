@@ -22,6 +22,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileUp, Save } from "lucide-react";
 import { ResumeContent } from "@/interfaces/resumeContent";
+import { analytics } from '../config/firebase';
+import { logEvent } from 'firebase/analytics';
 
 const SUPPORTED_FILE_TYPES = {
   "application/pdf": "PDF",
@@ -113,6 +115,14 @@ export default function CoverLetterForm({ resume }: CoverLetterFormProps) {
     if (!user?.uid) {
       toast.error("Please sign in to generate a cover letter");
       return;
+    }
+
+    if (analytics) {
+      logEvent(analytics, 'generate_cover_letter_clicked', {
+        subscription_status: hasCareerProAccess ? 'subscribed' : 'trial',
+        has_job_url: Boolean(jobUrl),
+        resume_source: resumeSource
+      });
     }
 
     if (!jobDescription) {

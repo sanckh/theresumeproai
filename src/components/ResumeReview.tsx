@@ -17,6 +17,8 @@ import { UpgradeDialog } from "./UpgradeDialog";
 import { ResumeData } from "@/interfaces/resumeData";
 import { ResumeAnalysis } from "@/interfaces/resumeAnalysis";
 import { ResumeReviewProps } from "@/interfaces/resumeReviewProps";
+import { analytics } from '../config/firebase';
+import { logEvent } from 'firebase/analytics';
 
 const SUPPORTED_FILE_TYPES = {
   "application/pdf": "PDF",
@@ -116,6 +118,14 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
     if (!user?.uid) {
       toast.error("Please sign in to analyze your resume");
       return;
+    }
+
+    if (analytics) {
+      logEvent(analytics, 'analyze_resume_clicked', {
+        subscription_status: hasResumeProAccess || hasCareerProAccess ? 'subscribed' : 'trial',
+        source: savedResume ? 'saved_resume' : 'uploaded_file',
+        file_type: file?.type
+      });
     }
 
     if (hasResumeProAccess || hasCareerProAccess) {
