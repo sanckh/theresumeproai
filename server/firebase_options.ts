@@ -33,14 +33,9 @@ const firebaseConfig = {
   messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.FIREBASE_APP_ID,
   measurementId: process.env.FIREBASE_MEASUREMENT_ID,
+  credential: admin.credential.cert(serviceAccount),
 };
 
-// Initialize Firebase Admin SDK
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  databaseURL: firebaseConfig.databaseURL,
-  storageBucket: firebaseConfig.storageBucket
-});
 
 // Initialize Firebase App
 const app = admin.initializeApp(firebaseConfig);
