@@ -9,7 +9,6 @@ import { PricingTierProps } from "@/interfaces/pricingTierProps";
 import { changeSubscription, createCheckoutSession } from "@/api/stripe";
 import { STRIPE_PRICE_IDS } from "@/config/stripeClient";
 
-
 export const PricingTier: React.FC<PricingTierProps> = ({
   name,
   price,
@@ -48,6 +47,7 @@ export const PricingTier: React.FC<PricingTierProps> = ({
   };
 
   const isCurrentPlan = subscriptionStatus?.tier === tier;
+  const buttonText = getButtonText();
 
   const handleSubscribe = async () => {
     if (!user) {
@@ -87,25 +87,27 @@ export const PricingTier: React.FC<PricingTierProps> = ({
   };
 
   return (
-    <div
+    <article
       className={`relative rounded-2xl border p-8 ${
         highlighted
           ? "border-primary/50 bg-primary/5 shadow-lg"
           : "border-border bg-card"
       } flex flex-col h-full`}
+      role="region"
+      aria-labelledby={`pricing-tier-${tier}`}
     >
       {highlighted && (
-        <Badge className="absolute -top-2 -right-2 px-3">
+        <Badge className="absolute -top-2 -right-2 px-3" aria-label="Most popular plan">
           Most Popular
         </Badge>
       )}
       {isCurrentPlan && (
         <>
-          <Badge variant="secondary" className="absolute -top-2 -left-2 px-3">
+          <Badge variant="secondary" className="absolute -top-2 -left-2 px-3" aria-label="Your current plan">
             Current Plan
           </Badge>
           {subscriptionStatus?.renewal_date && (
-            <p className="mt-2 text-sm text-muted-foreground">
+            <p className="mt-2 text-sm text-muted-foreground" role="status">
               Renews on {new Date(subscriptionStatus.renewal_date).toLocaleDateString()}
             </p>
           )}
@@ -113,21 +115,28 @@ export const PricingTier: React.FC<PricingTierProps> = ({
       )}
       
       <div className="flex-grow">
-        <h3 className="text-2xl font-bold">{name}</h3>
-        <div className="mt-4 flex items-baseline">
-          <span className="text-4xl font-bold tracking-tight">{price}</span>
-          <span className="ml-2 text-sm text-muted-foreground">per month</span>
-        </div>
-        <p className="mt-4 text-muted-foreground">{description}</p>
+        <header>
+          <h3 id={`pricing-tier-${tier}`} className="text-2xl font-bold">{name}</h3>
+          <div className="mt-4 flex items-baseline" aria-label="Pricing information">
+            <span className="text-4xl font-bold tracking-tight" aria-label={`${price} dollars`}>{price}</span>
+            <span className="ml-2 text-sm text-muted-foreground">per month</span>
+          </div>
+          <p className="mt-4 text-muted-foreground">{description}</p>
+        </header>
 
         {trialDescription && (
-          <p className="mt-4 text-sm text-primary font-medium">{trialDescription}</p>
+          <p className="mt-4 text-sm text-primary font-medium" role="note" aria-label="Trial information">
+            {trialDescription}
+          </p>
         )}
 
-        <ul className="mt-8 space-y-4">
+        <ul 
+          className="mt-8 space-y-4" 
+          aria-label={`Features included in the ${name} plan`}
+        >
           {features.map((feature) => (
             <li key={feature} className="flex items-start gap-3">
-              <Check className="h-5 w-5 text-primary shrink-0" />
+              <Check className="h-5 w-5 text-primary shrink-0" aria-hidden="true" />
               <span className="text-sm">{feature}</span>
             </li>
           ))}
@@ -140,9 +149,10 @@ export const PricingTier: React.FC<PricingTierProps> = ({
         variant={highlighted ? "default" : "outline"}
         disabled={isCurrentPlan}
         onClick={handleSubscribe}
+        aria-label={`${buttonText} - ${name} plan at ${price} per month`}
       >
-        {getButtonText()}
+        {buttonText}
       </Button>
-    </div>
+    </article>
   );
 };
