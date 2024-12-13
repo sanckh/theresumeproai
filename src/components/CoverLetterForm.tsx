@@ -24,6 +24,7 @@ import { FileUp, Save } from "lucide-react";
 import { ResumeContent } from "@/interfaces/resumeContent";
 import { analytics } from '../config/firebase';
 import { logEvent } from 'firebase/analytics';
+import { getSubscriptionStatus } from '@/api/subscription';
 
 const SUPPORTED_FILE_TYPES = {
   "application/pdf": "PDF",
@@ -118,8 +119,9 @@ export default function CoverLetterForm({ resume }: CoverLetterFormProps) {
     }
 
     if (analytics) {
+      const subscription_type = subscriptionStatus?.tier || 'FREE';
       logEvent(analytics, 'generate_cover_letter_clicked', {
-        subscription_status: hasCareerProAccess ? 'subscribed' : 'trial',
+        subscription_type,
         has_job_url: Boolean(jobUrl),
         resume_source: resumeSource
       });

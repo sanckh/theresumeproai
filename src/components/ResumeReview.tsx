@@ -19,6 +19,9 @@ import { ResumeAnalysis } from "@/interfaces/resumeAnalysis";
 import { ResumeReviewProps } from "@/interfaces/resumeReviewProps";
 import { analytics } from '../config/firebase';
 import { logEvent } from 'firebase/analytics';
+import { getSubscriptionStatus } from '@/api/subscription';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { FileUp, Save } from "lucide-react";
 
 const SUPPORTED_FILE_TYPES = {
   "application/pdf": "PDF",
@@ -36,18 +39,19 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
   const hasCareerProAccess = canUseFeature('career_pro');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (!hasResumeProAccess && !hasCareerProAccess) {
-      navigate('/pricing');
-    }
-  }, [hasResumeProAccess, hasCareerProAccess, navigate]);
-
   const [file, setFile] = useState<File | null>(null);
   const [parsedResume, setParsedResume] = useState<ParsedResume | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [shouldAnalyze, setShouldAnalyze] = useState(false);
   const [analysis, setAnalysis] = useState<ResumeAnalysis | null>(null);
+  const [resumeSource, setResumeSource] = useState<"upload" | "saved">(savedResume ? "saved" : "upload");
+
+  useEffect(() => {
+    if (!hasResumeProAccess && !hasCareerProAccess) {
+      navigate('/pricing');
+    }
+  }, [hasResumeProAccess, hasCareerProAccess, navigate]);
 
   useEffect(() => {
     if (savedResume) {
@@ -121,8 +125,9 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
     }
 
     if (analytics) {
+      const subscription_type = subscriptionStatus?.tier || 'FREE';
       logEvent(analytics, 'analyze_resume_clicked', {
-        subscription_status: hasResumeProAccess || hasCareerProAccess ? 'subscribed' : 'trial',
+        subscription_type,
         source: savedResume ? 'saved_resume' : 'uploaded_file',
         file_type: file?.type
       });
@@ -173,90 +178,111 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
             We'll provide detailed suggestions to help you stand out to recruiters and pass applicant tracking systems.
           </p>
         </div>
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <h2 className="text-lg font-semibold">Upload Your Resume</h2>
-            <p className="text-sm text-gray-500">
-              Supported formats: {Object.values(SUPPORTED_FILE_TYPES).join(", ")}
-            </p>
-            <div className="flex gap-4">
-              <Input
-                ref={fileInputRef}
-                type="file"
-                onChange={handleFileChange}
-                accept={Object.keys(SUPPORTED_FILE_TYPES).join(",")}
-                disabled={isUploading}
-              />
-              <Button
-                onClick={handleAnalyzeResume}
-                disabled={!parsedResume || isUploading}
-                className="w-full max-w-sm"
-              >
-                {isUploading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="mr-2 h-4 w-4" />
-                    Analyze Resume
-                  </>
+
+        <div className="grid gap-6">
+          <Tabs value={resumeSource} onValueChange={(value) => setResumeSource(value as "upload" | "saved")}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="upload" className="flex items-center gap-2">
+                <FileUp className="h-4 w-4" />
+                Upload Resume
+              </TabsTrigger>
+              <TabsTrigger value="saved" className="flex items-center gap-2">
+                <Save className="h-4 w-4" />
+                Use Saved Resume
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="upload" className="mt-4">
+              <Card className="p-4">
+                <div className="flex items-center gap-4">
+                  <Input
+                    type="file"
+                    accept={Object.keys(SUPPORTED_FILE_TYPES).join(",")}
+                    onChange={handleFileChange}
+                    disabled={isUploading}
+                    ref={fileInputRef}
+                  />
+                  {isUploading && <Loader2 className="h-4 w-4 animate-spin" />}
+                </div>
+                {isUploading && (
+                  <Alert className="mt-4">
+                    <AlertDescription>
+                      Processing your resume... This may take a few moments.
+                    </AlertDescription>
+                  </Alert>
                 )}
-              </Button>
-            </div>
-          </div>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="saved" className="mt-4">
+              <Card className="p-4">
+                {savedResume ? (
+                  <Alert>
+                    <AlertDescription>
+                      Using saved resume: {savedResume.name}
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <Alert>
+                    <AlertDescription>
+                      No resume selected. Please select a resume from the dropdown in the top menu.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </Card>
+            </TabsContent>
+          </Tabs>
 
-          {isUploading && (
-            <Alert>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              <AlertDescription>
-                Processing your resume... This may take a few moments.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {(file || savedResume) && !isUploading && (
-            <Alert>
-              <Upload className="mr-2 h-4 w-4" />
-              <AlertDescription>
-                {(file && `${file.name} (${SUPPORTED_FILE_TYPES[file.type as keyof typeof SUPPORTED_FILE_TYPES]})`) || savedResume.name} ready for analysis
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {analysis && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-semibold">Score:</span>
-                <span className="text-lg">{analysis.score}/100</span>
-              </div>
-
-              <Alert>
-                <AlertDescription>
-                  <h3 className="font-semibold mb-2">Strengths:</h3>
-                  <ul className="list-disc pl-4">
-                    {analysis.strengths.map((strength, index) => (
-                      <li key={index}>{strength}</li>
-                    ))}
-                  </ul>
-                </AlertDescription>
-              </Alert>
-
-              <Alert>
-                <AlertDescription>
-                  <h3 className="font-semibold mb-2">Suggestions:</h3>
-                  <ul className="list-disc pl-4">
-                    {analysis.suggestions.map((suggestion, index) => (
-                      <li key={index}>{suggestion}</li>
-                    ))}
-                  </ul>
-                </AlertDescription>
-              </Alert>
-            </div>
-          )}
+          <Button
+            onClick={handleAnalyzeResume}
+            className="w-full"
+            disabled={isUploading || (!parsedResume && resumeSource === "upload") || shouldAnalyze}
+          >
+            {shouldAnalyze ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Analyzing...
+              </>
+            ) : (
+              <>
+                <Upload className="mr-2 h-4 w-4" />
+                Analyze Resume
+              </>
+            )}
+          </Button>
         </div>
       </Card>
+
+      {analysis && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <span className="text-lg font-semibold">Score:</span>
+            <span className="text-lg">{analysis.score}/100</span>
+          </div>
+
+          <Alert>
+            <AlertDescription>
+              <h3 className="font-semibold mb-2">Strengths:</h3>
+              <ul className="list-disc pl-4">
+                {analysis.strengths.map((strength, index) => (
+                  <li key={index}>{strength}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
+
+          <Alert>
+            <AlertDescription>
+              <h3 className="font-semibold mb-2">Suggestions:</h3>
+              <ul className="list-disc pl-4">
+                {analysis.suggestions.map((suggestion, index) => (
+                  <li key={index}>{suggestion}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
 
       {/* Dialog component */}
       {showUpgradeDialog && (
