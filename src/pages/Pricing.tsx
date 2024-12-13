@@ -2,10 +2,16 @@ import { Header } from "@/components/Header";
 import { PricingTier } from "@/components/pricing/PricingTier";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { Helmet } from "react-helmet-async";
+import { useEffect } from "react";
+import { trackPageView } from "@/utils/analytics";
 
 export function Pricing() {
   const { subscriptionStatus } = useSubscription();
   
+  useEffect(() => {
+    trackPageView('Pricing', '/pricing');
+  }, []);
+
   const pricingTiers = [
     {
       name: "Resume Creator",

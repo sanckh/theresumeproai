@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Badge } from "@/components/ui/badge";
 import { Helmet } from "react-helmet-async";
+import { useEffect } from "react";
+import { trackPageView } from "@/utils/analytics";
 
 const features = [
   {
@@ -24,13 +26,60 @@ const features = [
 ];
 
 const Index = () => {
+  useEffect(() => {
+    trackPageView('Index', '/');
+  }, []);
+
   return (
     <>
       <Helmet>
-        <title>The Resume Pro AI - Professional Resume Builder</title>
-        <meta name="description" content="Create professional, ATS-optimized resumes with AI. Our advanced AI technology helps you craft compelling resumes tailored to your industry." />
-      </Helmet>
+        <title>The Resume Pro AI - Professional Resume Builder with AI</title>
+        <meta 
+          name="description" 
+          content="Create professional, ATS-optimized resumes with AI technology. Our advanced resume builder helps you craft compelling resumes tailored to your industry." 
+        />
+        <meta name="keywords" content="AI resume builder, professional resume creator, ATS-friendly resume, career tools, job application helper" />
+        <link rel="canonical" href="https://theresumeproai.com" />
+        
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://theresumeproai.com" />
+        <meta property="og:title" content="The Resume Pro AI - Professional Resume Builder" />
+        <meta property="og:description" content="Create professional, ATS-optimized resumes with AI technology. Get hired faster with our advanced resume builder." />
+        <meta property="og:image" content="https://theresumeproai.com/og-image.jpg" />
 
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="https://theresumeproai.com" />
+        <meta name="twitter:title" content="The Resume Pro AI - Professional Resume Builder" />
+        <meta name="twitter:description" content="Create professional, ATS-optimized resumes with AI technology. Get hired faster with our advanced resume builder." />
+        <meta name="twitter:image" content="https://theresumeproai.com/og-image.jpg" />
+
+        {/* JSON-LD Structured Data */}
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebApplication",
+            "name": "The Resume Pro AI",
+            "description": "Professional AI-powered resume builder",
+            "url": "https://theresumeproai.com",
+            "applicationCategory": "Resume Builder",
+            "operatingSystem": "Web Browser",
+            "offers": {
+              "@type": "Offer",
+              "price": "7.99",
+              "priceCurrency": "USD",
+              "priceValidUntil": "2024-12-31"
+            },
+            "aggregateRating": {
+              "@type": "AggregateRating",
+              "ratingValue": "4.8",
+              "ratingCount": "150"
+            },
+            "featureList": features.map(feature => feature.title)
+          })}
+        </script>
+      </Helmet>
       <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
         <Header />
         

@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Allow: /pricing
+Allow: /templates
+
+Disallow: /auth
+Disallow: /settings
+Disallow: /history
+
+Sitemap: https://theresumeproai.com/sitemap.xml

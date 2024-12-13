@@ -14,6 +14,7 @@ import History from "./pages/History";
 import Success from "./pages/Success";
 import SubscriptionConfirm from "./pages/SubscriptionConfirm";
 import Settings from "./pages/Settings";
+import NotFound from "./pages/NotFound";
 import { trackPageView } from './utils/analytics';
 import { useEffect } from 'react';
 
@@ -51,6 +52,7 @@ const App = () => (
               <Route path="/success" element={<Success />} />
               <Route path="/subscription-confirm" element={<SubscriptionConfirm />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
         </TooltipProvider>
