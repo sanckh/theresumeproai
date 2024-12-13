@@ -2,6 +2,8 @@ import OpenAI from "openai";
 import dotenv from 'dotenv';
 import { ParsedResume } from "../interfaces/parsedResume";
 import { ResumeData } from "../interfaces/resumeData";
+import { JobEntry } from "../interfaces/jobEntry";
+import { EducationEntry } from "../interfaces/educationEntry";
 
 dotenv.config();
 
@@ -305,7 +307,7 @@ export const enhanceResumeService = async (resumeData: ResumeData["data"]) => {
             email: parsedContent.email || resumeData.email || "",
             phone: parsedContent.phone || resumeData.phone || "",
             summary: parsedContent.summary || resumeData.summary || "",
-            jobs: Array.isArray(parsedContent.jobs) ? parsedContent.jobs.map((job: any) => ({
+            jobs: Array.isArray(parsedContent.jobs) ? parsedContent.jobs.map((job: JobEntry) => ({
                 title: job.title || "",
                 company: job.company || "",
                 startDate: job.startDate || "",
@@ -313,7 +315,7 @@ export const enhanceResumeService = async (resumeData: ResumeData["data"]) => {
                 description: job.description || "",
                 duties: Array.isArray(job.duties) ? job.duties : []
             })) : resumeData.jobs || [],
-            education: Array.isArray(parsedContent.education) ? parsedContent.education.map((edu: any) => ({
+            education: Array.isArray(parsedContent.education) ? parsedContent.education.map((edu: EducationEntry) => ({
                 institution: edu.institution || "",
                 degree: edu.degree || "",
                 startDate: edu.startDate || "",
