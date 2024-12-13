@@ -127,8 +127,8 @@ export default function CoverLetterForm({ resume }: CoverLetterFormProps) {
       });
     }
 
-    if (!jobDescription) {
-      toast.error("Please enter a job description");
+    if (!jobDescription && !jobUrl) {
+      toast.error("Please enter either a job description or a job URL");
       return;
     }
 

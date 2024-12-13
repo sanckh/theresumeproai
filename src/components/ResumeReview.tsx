@@ -79,7 +79,6 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
       setParsedResume(parsed);
       setShouldAnalyze(false);
       setAnalysis(null);
-      toast.info(`Resume "${savedResume.name}" loaded successfully`);
     }
   }, [savedResume]);
 
