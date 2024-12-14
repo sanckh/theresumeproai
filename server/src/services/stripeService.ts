@@ -51,6 +51,9 @@ export async function handleWebhook(payload: string | Buffer, signature: string)
       console.log('Subscription update event, processing...');
       await handleSubscriptionUpdate(event.data.object as Stripe.Subscription);
       break;
+    case 'invoice.payment_failed':
+      await handleSubscriptionUpdate(event.data.object as Stripe.Subscription);
+      break;
     case 'invoice.paid':
       { console.log('Invoice paid event, processing...');
       const invoice = event.data.object as Stripe.Invoice;
@@ -176,8 +179,19 @@ async function updateSubscriptionInFirestore(
     updated_at: new Date().toISOString(),
   };
 
-  // When canceling subscription, we want to overwrite the entire document
-  // to ensure old subscription data is cleared
+  // Log to Firestore
+  await logToFirestore({
+    eventType: 'INFO',
+    message: 'Subscription status updated',
+    data: {
+      userId,
+      subscription_id: subscription?.id,
+      status: data.status,
+      tier: data.tier
+    },
+    timestamp: new Date().toISOString(),
+  });
+
   if (!subscription) {
     await db.collection('subscriptions').doc(userId).set(data);
   } else {
