@@ -141,6 +141,8 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
       } catch (error) {
         console.error("Error analyzing resume:", error);
         toast.error("Failed to analyze resume");
+      } finally {
+        setShouldAnalyze(false);
       }
       return;
     }
@@ -165,6 +167,8 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
     } catch (error) {
       console.error("Error analyzing resume:", error);
       toast.error("Failed to analyze resume");
+    } finally {
+      setShouldAnalyze(false);
     }
   };
 

@@ -38,7 +38,10 @@ Instructions:
 - Preserve line breaks and spacing where appropriate.
 - Handle both traditional and modern resume formats.
 
-The response should be in the following format:
+IMPORTANT:
+- The response MUST be valid JSON.
+- DO NOT include code blocks, triple backticks, or any formatting other than the JSON object.
+- The response should be in this format:
 {
   "sections": {
     "Section Name": "Section Content",
@@ -52,10 +55,8 @@ The response should be in the following format:
 
 Do not include any additional explanations or notes.`;
 
-        const userMessage = `Resume Text:
-\`\`\`
-${resumeText}
-\`\`\``;
+
+        const userMessage = `Resume Text: ${resumeText}`;
 
         const response = await openai?.chat.completions.create({
             model: "gpt-4o",
@@ -71,14 +72,16 @@ ${resumeText}
         if (!assistantMessage) {
             throw new Error("No response from OpenAI");
         }
+        const cleanedContent = assistantMessage.replace(/```json|```/g, "").trim();
 
-        const parsedResume: ParsedResume = JSON.parse(assistantMessage);
+        const parsedResume: ParsedResume = JSON.parse(cleanedContent);
         return parsedResume;
     } catch (error) {
         console.error("Error parsing resume with OpenAI:", error);
         throw error;
     }
 };
+
 
 export const analyzeResumeService = async (
     resumeData: string | ParsedResume
@@ -246,40 +249,40 @@ export const enhanceResumeService = async (resumeData: ResumeData["data"]) => {
         const completion = await openai.chat.completions.create({
             model: "gpt-4o",
             messages: [
-                { 
+                {
                     role: "system",
                     content: `You are a professional resume writer tasked with enhancing resume content. Focus on improving the existing content without inventing new information. Your task is to:
-
-                     1. Work with whatever information is provided:
-                        - If a section is empty or missing, preserve it as empty
-                        - Focus on enhancing only the sections that have content
-                        - Do not invent or add information that isn't present
-                     
-                     2. Make existing content more impactful by:
-                        - Using stronger action verbs
-                        - Improving sentence structure and clarity
-                        - Making descriptions more professional
-                        - Enhancing readability and impact
-                     
-                     3. Preserve factual information:
-                        - Keep all dates, names, and contact information exactly as provided
-                        - Don't add fictional achievements or experiences
-                        - Only enhance the writing style and impact of existing content
-
-                    IMPORTANT: Your response must be valid JSON matching this exact structure:
-                    {
-                        "fullName": "string",
-                        "email": "string",
-                        "phone": "string",
-                        "summary": "string",
-                        "jobs": [],
-                        "education": [],
-                        "skills": "string"
-                    }
-
-                    If a field is empty in the input, keep it empty in the output.
-                    Focus only on improving the writing of sections that have content.`
-                },
+                
+                1. Work with whatever information is provided:
+                   - If a section is empty or missing, preserve it as empty
+                   - Focus on enhancing only the sections that have content
+                   - Do not invent or add information that isn't present
+                
+                2. Make existing content more impactful by:
+                   - Using stronger action verbs
+                   - Improving sentence structure and clarity
+                   - Making descriptions more professional
+                   - Enhancing readability and impact
+                
+                3. Preserve factual information:
+                   - Keep all dates, names, and contact information exactly as provided
+                   - Don't add fictional achievements or experiences
+                   - Only enhance the writing style and impact of existing content
+                
+                IMPORTANT: Your response must be valid JSON matching this exact structure, and MUST NOT include code fences, triple backticks, or any other formatting outside of plain JSON:
+                {
+                    "fullName": "string",
+                    "email": "string",
+                    "phone": "string",
+                    "summary": "string",
+                    "jobs": [],
+                    "education": [],
+                    "skills": "string"
+                }
+                
+                If a field is empty in the input, keep it empty in the output.
+                Focus only on improving the writing of sections that have content.`
+                },                
                 { role: "user",
                   content: JSON.stringify(resumeData) 
                 },
@@ -293,9 +296,10 @@ export const enhanceResumeService = async (resumeData: ResumeData["data"]) => {
             throw new Error("No response from OpenAI");
         }
 
+        const cleanedContent = enhancedContent.replace(/```json|```/g, "").trim();
         let parsedContent;
         try {
-            parsedContent = JSON.parse(enhancedContent);
+             parsedContent = JSON.parse(cleanedContent);
         } catch (error) {
             console.error("Failed to parse OpenAI response:", error);
             throw new Error("Invalid response format from OpenAI");
