@@ -29,3 +29,5 @@ server/serviceAccountKey.json
 src/.env.development
 .env.production
 .env.development
+.firebase
+.firebase/*
