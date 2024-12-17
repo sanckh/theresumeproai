@@ -3,8 +3,6 @@ import { GoogleAdProps } from '@/interfaces/googleAdProps';
 import { useEffect } from 'react';
 
 const isDevelopment = process.env.NODE_ENV === 'development';
-console.log('NODE_ENV:', process.env.NODE_ENV);
-console.log('isDevelopment:', isDevelopment);
 
 export const GoogleAd: React.FC<GoogleAdProps> = ({
   adSlot,
@@ -14,7 +12,6 @@ export const GoogleAd: React.FC<GoogleAdProps> = ({
   style = { display: 'block' }
 }) => {
   useEffect(() => {
-    console.log('GoogleAd mounted, isDevelopment:', isDevelopment);
     if (!isDevelopment) {
       try {
         ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
@@ -25,7 +22,6 @@ export const GoogleAd: React.FC<GoogleAdProps> = ({
   }, []);
 
   if (isDevelopment) {
-    console.log('Rendering development placeholder for slot:', adSlot);
     type AdSize = {
       width: string;
       height?: string;
@@ -104,7 +100,6 @@ export const GoogleAd: React.FC<GoogleAdProps> = ({
     );
   }
 
-  console.log('Rendering production ad for slot:', adSlot);
   return (
     <>
       <ins
