@@ -280,10 +280,6 @@ const Builder = () => {
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-3xl font-bold mb-6">Resume Builder</h1>
-          
-          <section className="mb-8 flex justify-center">
-            <ConditionalAd adSlot="7871063844" />
-          </section>
 
           <div className="space-y-6">
             <div className="flex justify-between items-center mb-6">
@@ -410,6 +406,9 @@ const Builder = () => {
                 </TabsContent>
               </Tabs>
             </div>
+            <section className="mb-8 flex justify-center">
+            <ConditionalAd adSlot="7871063844" />
+          </section>
           </div>
         </div>
       </main>
