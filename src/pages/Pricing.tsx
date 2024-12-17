@@ -4,6 +4,7 @@ import { useSubscription } from "@/contexts/SubscriptionContext";
 import { Helmet } from "react-helmet-async";
 import { useEffect } from "react";
 import { trackPageView } from "@/utils/analytics";
+import { ConditionalAd } from "@/components/googleads/ConditionalAd";
 
 export function Pricing() {
   const { subscriptionStatus } = useSubscription();
@@ -83,6 +84,7 @@ export function Pricing() {
             "description": "Professional resume building service with AI-powered features",
             "priceRange": "$7.99 - $14.99",
             "offers": pricingTiers.map(tier => ({
+
               "@type": "Offer",
               "name": tier.name,
               "price": tier.price.replace('$', ''),
@@ -139,6 +141,9 @@ export function Pricing() {
                 and updates. Not satisfied? Get a full refund within the first 30 days.
               </p>
             </div>
+            <section className="mb-12 flex justify-center">
+            <ConditionalAd adSlot="6749553863" />
+          </section>
           </section>
         </main>
       </div>

@@ -27,6 +27,7 @@ import { ResumeData } from "@/interfaces/resumeData";
 import { JobEntry } from "@/interfaces/jobEntry";
 import { EducationEntry } from "@/interfaces/educationEntry";
 import CoverLetterForm from "@/components/CoverLetterForm";
+import { ConditionalAd } from "@/components/googleads/ConditionalAd";
 
 const STORAGE_KEY = "saved_resume";
 
@@ -274,133 +275,142 @@ const Builder = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <Header />
-
       <main className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-4">
-            {isEditingName ? (
-              <Input
-                value={currentResumeName}
-                onChange={(e) => setCurrentResumeName(e.target.value)}
-                onBlur={() => setIsEditingName(false)}
-                onKeyDown={(e) => e.key === 'Enter' && setIsEditingName(false)}
-                className="w-64"
-                autoFocus
-              />
-            ) : (
-              <h1 className="text-3xl font-bold flex items-center gap-2">
-                {currentResumeName}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setIsEditingName(true)}
-                >
-                  <Edit2 className="h-4 w-4" />
-                </Button>
-              </h1>
-            )}
-          </div>
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-3xl font-bold mb-6">Resume Builder</h1>
+          
+          <section className="mb-8 flex justify-center">
+            <ConditionalAd adSlot="7871063844" />
+          </section>
 
-          <div className="flex items-center gap-4">
-            <Button 
-              variant="outline" 
-              className="flex items-center gap-2"
-              onClick={handleSaveResume}
-              disabled={isSaving}
-            >
-              {isSaving ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4" />
-              )}
-              Save
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="flex items-center gap-2">
-                  <FileText className="h-4 w-4" />
-                  {currentResumeId ? currentResumeName : (savedResumes.length > 0 ? "Select Resume" : "Create New")}
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                {savedResumes.map((resume) => (
-                  <DropdownMenuItem
-                    key={resume.id}
-                    onClick={() => {
-                      setCurrentResumeId(resume.id);
-                      setCurrentResumeName(resume.name);
-                      loadResume(resume.id);
-                      toast.info(`Loaded "${resume.name}"`);
-                    }}
-                  >
-                    {resume.name}
-                  </DropdownMenuItem>
-                ))}
-                {savedResumes.length > 0 && (
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setCurrentResumeId(null);
-                      setCurrentResumeName("Untitled Resume");
-                      setResumeData({
-                        id: "",
-                        user_id: user?.uid || "",
-                        name: "Untitled Resume",
-                        data: {
-                          fullName: "",
-                          email: "",
-                          phone: "",
-                          summary: "",
-                          jobs: [],
-                          education: [],
-                          skills: "",
-                        },
-                      });
-                      toast.info("Created new resume");
-                    }}
-                  >
-                    Create New Resume
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          <Tabs defaultValue="builder">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="builder">Resume Builder</TabsTrigger>
-              <TabsTrigger value="review">Resume Review</TabsTrigger>
-              <TabsTrigger value="cover-letter">Cover Letter</TabsTrigger>
-            </TabsList>
-            <TabsContent value="builder" className="space-y-4">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="space-y-6">
-                  <ResumeForm
-                    data={resumeData.data}
-                    onChange={handleChange}
+          <div className="space-y-6">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-4">
+                {isEditingName ? (
+                  <Input
+                    value={currentResumeName}
+                    onChange={(e) => setCurrentResumeName(e.target.value)}
+                    onBlur={() => setIsEditingName(false)}
+                    onKeyDown={(e) => e.key === 'Enter' && setIsEditingName(false)}
+                    className="w-64"
+                    autoFocus
                   />
-                </div>
-                <div className="space-y-6">
-                  <div ref={resumeRef}>
-                    <ResumePreview
-                      data={resumeData}
-                      template={selectedTemplate}
-                    />
-                  </div>
-                </div>
+                ) : (
+                  <h1 className="text-3xl font-bold flex items-center gap-2">
+                    {currentResumeName}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setIsEditingName(true)}
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
+                  </h1>
+                )}
               </div>
-            </TabsContent>
-            <TabsContent value="review">
-              <ResumeReview savedResume={resumeData} />
-            </TabsContent>
-            <TabsContent value="cover-letter">
-              <CoverLetterForm resume={resumeData} />
-            </TabsContent>
-          </Tabs>
+
+              <div className="flex items-center gap-4">
+                <Button 
+                  variant="outline" 
+                  className="flex items-center gap-2"
+                  onClick={handleSaveResume}
+                  disabled={isSaving}
+                >
+                  {isSaving ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  Save
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      {currentResumeId ? currentResumeName : (savedResumes.length > 0 ? "Select Resume" : "Create New")}
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    {savedResumes.map((resume) => (
+                      <DropdownMenuItem
+                        key={resume.id}
+                        onClick={() => {
+                          setCurrentResumeId(resume.id);
+                          setCurrentResumeName(resume.name);
+                          loadResume(resume.id);
+                          toast.info(`Loaded "${resume.name}"`);
+                        }}
+                      >
+                        {resume.name}
+                      </DropdownMenuItem>
+                    ))}
+                    {savedResumes.length > 0 && (
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setCurrentResumeId(null);
+                          setCurrentResumeName("Untitled Resume");
+                          setResumeData({
+                            id: "",
+                            user_id: user?.uid || "",
+                            name: "Untitled Resume",
+                            data: {
+                              fullName: "",
+                              email: "",
+                              phone: "",
+                              summary: "",
+                              jobs: [],
+                              education: [],
+                              skills: "",
+                            },
+                          });
+                          toast.info("Created new resume");
+                        }}
+                      >
+                        Create New Resume
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <Tabs defaultValue="builder">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="builder">Resume Builder</TabsTrigger>
+                  <TabsTrigger value="review">Resume Review</TabsTrigger>
+                  <TabsTrigger value="cover-letter">Cover Letter</TabsTrigger>
+                </TabsList>
+                <TabsContent value="builder" className="space-y-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="space-y-6">
+                      <ResumeForm
+                        data={resumeData.data}
+                        onChange={handleChange}
+                      />
+                    </div>
+                    <div className="space-y-6">
+                      <div ref={resumeRef}>
+                        <ResumePreview
+                          data={resumeData}
+                          template={selectedTemplate}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+                <TabsContent value="review">
+                  <ResumeReview savedResume={resumeData} />
+                </TabsContent>
+                <TabsContent value="cover-letter">
+                  <CoverLetterForm resume={resumeData} />
+                </TabsContent>
+              </Tabs>
+            </div>
+          </div>
         </div>
       </main>
     </div>

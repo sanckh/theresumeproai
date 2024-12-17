@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Helmet } from "react-helmet-async";
 import { useEffect } from "react";
 import { trackPageView } from "@/utils/analytics";
+import { ConditionalAd } from "@/components/googleads/ConditionalAd";
 
 const features = [
   {
@@ -120,6 +121,10 @@ const Index = () => {
                 </article>
               ))}
             </div>
+          </section>
+
+          <section className="mt-16 flex justify-center">
+            <ConditionalAd adSlot="6917074826" />
           </section>
 
           <section className="trial-info mt-16 text-center" aria-label="Trial Information">
