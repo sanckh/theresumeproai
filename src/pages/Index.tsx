@@ -126,7 +126,7 @@ const Index = () => {
 
           <section className="trial-info mt-16 text-center" aria-label="Trial Information">
             <p className="text-gray-600">
-              <span role="img" aria-label="sparkles">✨</span> Free trial available with our Premium plan. No credit card required.
+              <span role="img" aria-label="sparkles">✨</span> Free trial available with no credit card required.
             </p>
           </section>
         </main>

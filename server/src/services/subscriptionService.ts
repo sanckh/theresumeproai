@@ -32,9 +32,9 @@ async function getTrialStatus(userId: string): Promise<{
   return {
     hasStartedTrial: true,
     trials: {
-      resume_creator: { remaining: trialData?.resume_creator?.remainingUses ?? 1 },
-      resume_pro: { remaining: trialData?.resume_pro?.remainingUses ?? 1 },
-      career_pro: { remaining: trialData?.career_pro?.remainingUses ?? 1 }
+      resume_creator: { remaining: trialData?.resume_creator?.remainingUses ?? 3 },
+      resume_pro: { remaining: trialData?.resume_pro?.remainingUses ?? 3 },
+      career_pro: { remaining: trialData?.career_pro?.remainingUses ?? 3 }
     }
   };
 }
@@ -135,11 +135,10 @@ export async function startTrial(
     throw new Error('Trial already used');
   }
 
-  // Initialize all trial types at once
   await trialRef.set({
-    resume_creator: { remainingUses: 1, started_at: new Date().toISOString() },
-    resume_pro: { remainingUses: 1, started_at: new Date().toISOString() },
-    career_pro: { remainingUses: 1, started_at: new Date().toISOString() }
+    resume_creator: { remainingUses: 3, started_at: new Date().toISOString() },
+    resume_pro: { remainingUses: 3, started_at: new Date().toISOString() },
+    career_pro: { remainingUses: 3, started_at: new Date().toISOString() }
   });
 
   return getUserSubscriptionStatus(userId);

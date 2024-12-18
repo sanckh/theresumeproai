@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Input } from "./ui/input";
@@ -9,7 +9,7 @@ import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { auth } from "@/config/firebase";
-import { Loader2, Wand2 } from "lucide-react";
+import { Loader2, Wand2, Download } from "lucide-react";
 import { UpgradeDialog } from "./UpgradeDialog";
 import { CoverLetterFormProps } from "@/interfaces/coverLetterFormProps";
 import { saveCoverLetter } from "@/api/coverLetter";
@@ -25,6 +25,9 @@ import { ResumeContent } from "@/interfaces/resumeContent";
 import { analytics } from '../config/firebase';
 import { logEvent } from 'firebase/analytics';
 import { getSubscriptionStatus } from '@/api/subscription';
+import { downloadTextAsFile } from "@/utils/downloadUtils";
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 const SUPPORTED_FILE_TYPES = {
   "application/pdf": "PDF",
@@ -38,22 +41,25 @@ export default function CoverLetterForm({ resume }: CoverLetterFormProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const hasCareerProAccess = canUseFeature('career_pro');
-
-  const [jobDescription, setJobDescription] = useState("");
-  const [jobUrl, setJobUrl] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
-  const [generatedCoverLetter, setGeneratedCoverLetter] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [parsedResume, setParsedResume] = useState<ParsedResume | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [resumeSource, setResumeSource] = useState<"upload" | "saved">(resume ? "saved" : "upload");
+  const hasAnyTrialsRemaining = (subscriptionStatus?.trials?.resume_creator?.remaining > 0) || 
+    (subscriptionStatus?.trials?.resume_pro?.remaining > 0) || 
+    (subscriptionStatus?.trials?.career_pro?.remaining > 0);
 
   useEffect(() => {
-    if ( !hasCareerProAccess) {
-      navigate('/pricing');
+    if (!hasCareerProAccess && !hasAnyTrialsRemaining && subscriptionStatus?.status !== 'active') {
+      toast.message(
+        "You've used all your trial credits", 
+        {
+          description: "Make sure to save or download your cover letter before leaving. Visit our pricing page to continue using all features.",
+          duration: 15000,
+          action: {
+            label: "View Plans",
+            onClick: () => navigate('/pricing')
+          }
+        }
+      );
     }
-  }, [hasCareerProAccess, navigate]);
+  }, [hasCareerProAccess, hasAnyTrialsRemaining, subscriptionStatus?.status, navigate]);
 
   useEffect(() => {
     if (resume) {
@@ -214,6 +220,52 @@ export default function CoverLetterForm({ resume }: CoverLetterFormProps) {
     }
   };
 
+  const [jobDescription, setJobDescription] = useState("");
+  const [jobUrl, setJobUrl] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+  const [generatedCoverLetter, setGeneratedCoverLetter] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [parsedResume, setParsedResume] = useState<ParsedResume | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [resumeSource, setResumeSource] = useState<"upload" | "saved">(resume ? "saved" : "upload");
+  const [isDownloading, setIsDownloading] = useState(false);
+  const coverLetterRef = useRef<HTMLDivElement>(null);
+
+  const handleDownloadPDF = async () => {
+    if (!coverLetterRef.current) return;
+    
+    try {
+      setIsDownloading(true);
+      
+      const canvas = await html2canvas(coverLetterRef.current, {
+        scale: 2, // Higher quality
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+      
+      const imgWidth = 210; // A4 width in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      const pdf = new jsPDF({
+        orientation: imgHeight > imgWidth ? 'portrait' : 'landscape',
+        unit: 'mm'
+      });
+      
+      const imgData = canvas.toDataURL('image/jpeg', 1.0);
+      pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+      
+      pdf.save('cover-letter.pdf');
+      toast.success('Cover letter downloaded successfully!');
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      toast.error('Failed to download cover letter');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   return (
     <div className="space-y-4 p-4">
       <Card className="p-6 space-y-6">
@@ -321,12 +373,30 @@ export default function CoverLetterForm({ resume }: CoverLetterFormProps) {
       {generatedCoverLetter && (
         <Card className="p-4">
           <div className="space-y-4">
-            <Label>Generated Cover Letter</Label>
-            <Textarea
-              value={generatedCoverLetter}
-              onChange={(e) => setGeneratedCoverLetter(e.target.value)}
-              className="min-h-[400px]"
-            />
+            <div className="flex justify-between items-center">
+              <Label>Generated Cover Letter</Label>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadPDF}
+                disabled={isDownloading}
+                className="flex items-center gap-2"
+              >
+                {isDownloading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                {isDownloading ? "Downloading..." : "Download PDF"}
+              </Button>
+            </div>
+            <div ref={coverLetterRef} className="bg-white p-8">
+              <Textarea
+                value={generatedCoverLetter}
+                onChange={(e) => setGeneratedCoverLetter(e.target.value)}
+                className="min-h-[400px] font-serif text-base leading-relaxed"
+              />
+            </div>
           </div>
         </Card>
       )}

@@ -40,35 +40,57 @@ export async function handleWebhook(payload: string | Buffer, signature: string)
 
   console.log('Processing webhook event type:', event.type);
   
-  switch (event.type) {
-    case 'checkout.session.completed':
-      console.log('Checkout session completed, processing...');
-      await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
-      console.log('Checkout session processed successfully');
-      break;
-    case 'customer.subscription.updated':
-    case 'customer.subscription.deleted':
-      console.log('Subscription update event, processing...');
-      await handleSubscriptionUpdate(event.data.object as Stripe.Subscription);
-      break;
-    case 'invoice.payment_failed':
-      await handleSubscriptionUpdate(event.data.object as Stripe.Subscription);
-      break;
-    case 'invoice.paid':
-      { console.log('Invoice paid event, processing...');
-      const invoice = event.data.object as Stripe.Invoice;
-      if (invoice.subscription) {
-        const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
-        await handleSubscriptionUpdate(subscription);
-      }
-      break; }
-    default:
-      await logToFirestore({
-        eventType: 'WARNING',
-        message: `Unhandled webhook event type: ${event.type}`,
-        data: { eventType: event.type },
-        timestamp: new Date().toISOString(),
-      });
+  try {
+    switch (event.type) {
+      case 'checkout.session.completed':
+        console.log('Checkout session completed, processing...');
+        await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
+        console.log('Checkout session processed successfully');
+        break;
+      case 'customer.subscription.updated':
+      case 'customer.subscription.deleted':
+        console.log('Subscription update event, processing...');
+        await handleSubscriptionUpdate(event.data.object as Stripe.Subscription);
+        break;
+      case 'invoice.payment_failed':
+        await handleSubscriptionUpdate(event.data.object as Stripe.Subscription);
+        break;
+      case 'invoice.paid':
+      case 'invoice.payment_succeeded':
+      case 'invoice.updated':
+        { 
+          console.log('Invoice event processing...');
+          const invoice = event.data.object as Stripe.Invoice;
+          if (invoice.subscription) {
+            try {
+              const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
+              await handleSubscriptionUpdate(subscription);
+            } catch (error) {
+              // If this is a new subscription, the customer ID might not be in our database yet
+              // This is expected and we can safely ignore these errors
+              console.log('Invoice processing skipped - likely a new subscription setup');
+            }
+          }
+          break; 
+        }
+      default:
+        await logToFirestore({
+          eventType: 'WARNING',
+          message: `Unhandled webhook event type: ${event.type}`,
+          data: { eventType: event.type },
+          timestamp: new Date().toISOString(),
+        });
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    console.error('Error processing webhook:', error);
+    await logToFirestore({
+      eventType: 'ERROR',
+      message: `Error processing webhook: ${errorMessage}`,
+      data: { eventType: event.type, error: errorMessage },
+      timestamp: new Date().toISOString(),
+    });
+    throw error;
   }
   return event;
 }

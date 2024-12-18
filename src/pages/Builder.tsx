@@ -77,7 +77,7 @@ const Builder = () => {
   }, [user, authLoading, navigate]);
 
   useEffect(() => {
-    if (!canCreate && (!hasAnyTrialsRemaining) && subscriptionStatus?.status !== 'active') {
+    if (!canCreate && !hasAnyTrialsRemaining && subscriptionStatus?.status !== 'active') {
       toast.message(
         "You've used all your trial credits", 
         {

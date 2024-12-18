@@ -2,7 +2,6 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -26,26 +25,24 @@ export const TrialWelcomeDialog = ({
             <Gift className="h-5 w-5" />
             Welcome to Your Free Trial!
           </DialogTitle>
-          <DialogDescription>
-            <div className="space-y-4">
-              <div>
-                Thank you for starting your free trial! Here are some tips to make the most of it:
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Thank you for starting your free trial! Here are some tips to make the most of it:
+            </p>
+            <div className="space-y-2">
+              <div className="flex items-start gap-2">
+                <Download className="h-4 w-4 mt-1" />
+                <p className="text-sm text-muted-foreground">Remember to download your enhanced resumes and cover letters - they'll be available even after your trial ends!</p>
               </div>
-              <div className="space-y-2">
-                <div className="flex items-start gap-2">
-                  <Download className="h-4 w-4 mt-1" />
-                  <div>Remember to download your enhanced resumes and cover letters - they'll be available even after your trial ends!</div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Save className="h-4 w-4 mt-1" />
-                  <div>Save your work frequently to keep track of your progress.</div>
-                </div>
-              </div>
-              <div className="text-sm text-muted-foreground">
-                Enjoying the service? Don't forget to subscribe to keep access to all premium features and unlimited usage!
+              <div className="flex items-start gap-2">
+                <Save className="h-4 w-4 mt-1" />
+                <p className="text-sm text-muted-foreground">Save your work frequently to keep track of your progress.</p>
               </div>
             </div>
-          </DialogDescription>
+            <p className="text-sm text-muted-foreground">
+              Enjoying the service? Don't forget to subscribe to keep access to all premium features and unlimited usage!
+            </p>
+          </div>
         </DialogHeader>
         <DialogFooter>
           <Button onClick={onClose}>Got it!</Button>

@@ -21,14 +21,13 @@ export function Pricing() {
       description: "Perfect for creating your first resume",
       features: [
         "AI Resume Builder",
-        "Try all features once for free (trial)",
         "Multiple resume templates",
         "Export to PDF",
         "ATS-friendly format",
         "Real-time AI suggestions",
       ],
       trialFeatures: ['resume_creator', 'resume_pro', 'career_pro'] as const,
-      trialDescription: "Try all features once for free",
+      trialDescription: "Try all features three times for free",
     },
     {
       name: "Resume Pro",
@@ -37,7 +36,6 @@ export function Pricing() {
       description: "Advanced resume building and review",
       features: [
         "Everything in Resume Creator",
-        "Try all features once for free (trial)",
         "AI Resume Review",
         "Keyword optimization",
         "Detailed feedback",
@@ -46,7 +44,7 @@ export function Pricing() {
       ],
       highlighted: true,
       trialFeatures: ['resume_creator', 'resume_pro', 'career_pro'] as const,
-      trialDescription: "Try all features once for free",
+      trialDescription: "Try all features three times for free",
     },
     {
       name: "Career Pro",
@@ -55,14 +53,13 @@ export function Pricing() {
       description: "Complete career document solution",
       features: [
         "Everything in Resume Pro",
-        "Try all features once for free (trial)",
         "AI Cover Letter Generator",
         "Multiple cover letter templates",
         "Industry-specific cover letters",
         "Matching resume & cover letter designs",
       ],
       trialFeatures: ['resume_creator', 'resume_pro', 'career_pro'] as const,
-      trialDescription: "Try all features once for free",
+      trialDescription: "Try all features three times for free",
     },
   ];
 
