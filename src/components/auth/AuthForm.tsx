@@ -103,9 +103,19 @@ export const AuthForm = ({ isSignUp, onToggleMode }: AuthFormProps) => {
           }
           toast.error(errorMessage);
         } else if (confirmEmail) {
-          toast.success(
-            "Account created successfully! Please check your email to verify your account."
+          toast.message(
+            "Account created successfully! ",
+            {
+              description: "Please check your email to verify your account before signing in.",
+              duration: 30000,
+              className: "bg-primary/10 border-primary text-lg",
+              action: {
+                label: "Resend Email",
+                onClick: handleResendVerification
+              }
+            }
           );
+          onToggleMode(); // Switch to sign in mode
           form.reset(defaultValues);
         } else {
           toast.success("Account created successfully!");

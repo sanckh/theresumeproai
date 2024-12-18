@@ -102,9 +102,6 @@ const Index = () => {
               <Button asChild size="lg">
                 <Link to="/pricing" aria-label="View our pricing plans">View Pricing Plans</Link>
               </Button>
-              <Button asChild size="lg" variant="outline">
-                <Link to="/builder" aria-label="Try our resume builder demo">Try Builder Demo</Link>
-              </Button>
             </div>
           </section>
 

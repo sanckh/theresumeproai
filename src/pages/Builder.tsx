@@ -34,7 +34,7 @@ const STORAGE_KEY = "saved_resume";
 type SavedResume = ResumeData;
 
 const Builder = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { canUseFeature, subscriptionStatus } = useSubscription();
   const canCreate = canUseFeature('resume_creator');
   const canReview = canUseFeature('resume_pro');
@@ -71,13 +71,13 @@ const Builder = () => {
         subscriptionStatus.trials.career_pro.remaining > 0);
 
   useEffect(() => {
-    if (!user) {
+    if (!authLoading && !user) {
       navigate('/auth');
     }
-  }, [user, navigate]);
+  }, [user, authLoading, navigate]);
 
   useEffect(() => {
-    if (!canCreate && (!hasAnyTrialsRemaining)) {
+    if (!canCreate && (!hasAnyTrialsRemaining) && subscriptionStatus?.status !== 'active') {
       toast.message(
         "You've used all your trial credits", 
         {
@@ -90,7 +90,7 @@ const Builder = () => {
         }
       );
     }
-  }, [canCreate, hasAnyTrialsRemaining, navigate]);
+  }, [canCreate, hasAnyTrialsRemaining, subscriptionStatus?.status, navigate]);
 
   // Load saved resumes into dropdown but don't auto-select
   useEffect(() => {

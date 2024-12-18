@@ -3,9 +3,14 @@ import { GoogleAd } from './GoogleAd';
 import type { GoogleAdProps } from '@/interfaces/googleAdProps';
 
 export const ConditionalAd: React.FC<GoogleAdProps> = (props) => {
-  const { subscriptionStatus } = useSubscription();
+  const { subscriptionStatus, loading } = useSubscription();
   
-  // Show ad if subscription status is undefined (still loading) or user is on free tier
+  // Don't show ad while subscription status is loading
+  if (loading) {
+    return null;
+  }
+  
+  // Show ad only if user has no subscription or is on free tier
   if (!subscriptionStatus?.tier || subscriptionStatus.tier === 'free') {
     return <GoogleAd {...props} />;
   }
