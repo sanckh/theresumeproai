@@ -38,19 +38,21 @@ export const UpgradeDialog = ({
             <CreditCard className="h-5 w-5" />
             {title}
           </DialogTitle>
-          <DialogDescription className="space-y-2">
-            <p>{description || defaultDescription}</p>
-            {feature && (
-              <div className="pt-2">
-                <p>Upgrade now to {isTrialExpired ? "continue using" : "unlock"} {feature} and many more premium features!</p>
-                <ul className="list-disc pl-6 mt-2 space-y-1">
-                  <li>Unlimited {feature}</li>
-                  <li>Priority support</li>
-                  <li>Advanced customization options</li>
-                  <li>Premium templates</li>
-                </ul>
-              </div>
-            )}
+          <DialogDescription>
+            <div className="space-y-4">
+              <div>{description || defaultDescription}</div>
+              {feature && (
+                <div className="space-y-2">
+                  <div>Upgrade now to {isTrialExpired ? "continue using" : "unlock"} {feature} and many more premium features!</div>
+                  <ul className="list-disc pl-6 space-y-1">
+                    <li>Unlimited {feature}</li>
+                    <li>Priority support</li>
+                    <li>Advanced customization options</li>
+                    <li>Premium templates</li>
+                  </ul>
+                </div>
+              )}
+            </div>
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

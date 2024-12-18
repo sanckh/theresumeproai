@@ -18,7 +18,7 @@ export function CancelSubscriptionDialog() {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
-  const { refreshSubscription } = useSubscription();
+  const { subscriptionStatus, refreshSubscription } = useSubscription();
 
   const handleCancel = async () => {
     if (!user) return;
@@ -46,7 +46,13 @@ export function CancelSubscriptionDialog() {
         <DialogHeader>
           <DialogTitle>Cancel Subscription</DialogTitle>
           <DialogDescription>
-            Are you sure you want to cancel your subscription? You'll lose access to premium features at the end of your current billing period.
+            Are you sure you want to cancel your subscription? You'll continue to have access to all features until the end of your current billing period. After that, your account will revert to the free tier.
+            {subscriptionStatus?.renewal_date && (
+              <p className="mt-4">
+                Your subscription will remain active until{' '}
+                {new Date(subscriptionStatus.renewal_date).toLocaleDateString()}.
+              </p>
+            )}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

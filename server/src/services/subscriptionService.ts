@@ -80,31 +80,34 @@ async function getPaidSubscriptionStatus(userId: string): Promise<{
 }
 
 export async function getUserSubscriptionStatus(userId: string): Promise<SubscriptionStatus> {
-  const [trialStatus, subscriptionStatus] = await Promise.all([
+  const [trialStatus, paidStatus] = await Promise.all([
     getTrialStatus(userId),
     getPaidSubscriptionStatus(userId)
   ]);
 
-
   // If user has an active paid subscription, it takes precedence over trials
-  if (subscriptionStatus.status === 'active') {
-    const result = {
-      ...subscriptionStatus,
+  if (paidStatus.status === 'active') {
+    return {
+      tier: paidStatus.tier,
+      status: paidStatus.status,
       hasStartedTrial: trialStatus.hasStartedTrial,
-      trials: trialStatus.trials
-    } as SubscriptionStatus;
-    return result;
+      trials: trialStatus.trials,
+      renewal_date: paidStatus.renewal_date,
+      stripeSubscriptionId: paidStatus.stripeSubscriptionId,
+      stripeCustomerId: paidStatus.stripeCustomerId
+    };
   }
 
   // If no active subscription but has trials, return trial status
-  const result = {
+  return {
     tier: SubscriptionTier.FREE,
     status: 'none',
     hasStartedTrial: trialStatus.hasStartedTrial,
     trials: trialStatus.trials,
-    renewal_date: null
-  } as SubscriptionStatus;
-  return result;
+    renewal_date: paidStatus.renewal_date,
+    stripeSubscriptionId: paidStatus.stripeSubscriptionId,
+    stripeCustomerId: paidStatus.stripeCustomerId
+  };
 }
 
 export async function createSubscription(

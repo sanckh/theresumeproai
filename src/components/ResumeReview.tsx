@@ -32,11 +32,13 @@ const SUPPORTED_FILE_TYPES = {
 } as const;
 
 export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
-  const { canUseFeature, subscriptionStatus } = useSubscription();
+  const { canUseFeature, hasSubscriptionAccess, subscriptionStatus, refreshSubscription } = useSubscription();
   const navigate = useNavigate();
   const { user } = useAuth();
   const hasResumeProAccess = canUseFeature('resume_pro');
   const hasCareerProAccess = canUseFeature('career_pro');
+  const hasSubscriptionResumeAccess = hasSubscriptionAccess('resume_pro');
+  const hasSubscriptionCareerAccess = hasSubscriptionAccess('career_pro');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [file, setFile] = useState<File | null>(null);
@@ -133,10 +135,31 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
     }
 
     if (hasResumeProAccess || hasCareerProAccess) {
+      if (!hasSubscriptionResumeAccess && !hasSubscriptionCareerAccess) {
+        if (!subscriptionStatus?.trials?.resume_pro?.remaining || 
+            subscriptionStatus.trials.resume_pro.remaining <= 0) {
+          setShowUpgradeDialog(true);
+          return;
+        }
+
+        try {
+          const success = await decrementTrialUse(user.uid, 'resume_pro');
+          if (!success) {
+            setShowUpgradeDialog(true);
+            return;
+          }
+        } catch (error) {
+          console.error("Error decrementing trial:", error);
+          toast.error("Failed to use trial");
+          return;
+        }
+      }
+
       try {
         setShouldAnalyze(true);
         const result = await analyzeResumeAPI(user.uid, parsedResume);
         setAnalysis(result);
+        await refreshSubscription();
         toast.success("Resume analysis completed!");
       } catch (error) {
         console.error("Error analyzing resume:", error);
@@ -154,15 +177,16 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
     }
 
     try {
+      console.log("Decrementing trial usage...");
       const success = await decrementTrialUse(user.uid, 'resume_pro');
       if (!success) {
         setShowUpgradeDialog(true);
         return;
       }
-
       setShouldAnalyze(true);
       const result = await analyzeResumeAPI(user.uid, parsedResume);
       setAnalysis(result);
+      await refreshSubscription();
       toast.success("Resume analysis completed!");
     } catch (error) {
       console.error("Error analyzing resume:", error);

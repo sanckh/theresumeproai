@@ -34,7 +34,7 @@ const SUPPORTED_FILE_TYPES = {
 } as const;
 
 export default function CoverLetterForm({ resume }: CoverLetterFormProps) {
-  const { canUseFeature, subscriptionStatus } = useSubscription();
+  const { canUseFeature, hasSubscriptionAccess, subscriptionStatus, refreshSubscription } = useSubscription();
   const navigate = useNavigate();
   const { user } = useAuth();
   const hasCareerProAccess = canUseFeature('career_pro');
@@ -137,8 +137,31 @@ export default function CoverLetterForm({ resume }: CoverLetterFormProps) {
       return;
     }
 
-    // First check if user has the correct subscription
     if (hasCareerProAccess) {
+      console.log("User has Career Pro access");
+      // Only use trial if they don't have subscription access
+      if (!hasSubscriptionAccess('career_pro')) {
+        console.log("Using trial access...");
+        // Check if they have trials remaining first
+        if (!subscriptionStatus?.trials?.career_pro?.remaining || 
+            subscriptionStatus.trials.career_pro.remaining <= 0) {
+          setShowUpgradeDialog(true);
+          return;
+        }
+
+        try {
+          const success = await decrementTrialUse(user.uid, 'career_pro');
+          if (!success) {
+            setShowUpgradeDialog(true);
+            return;
+          }
+        } catch (error) {
+          console.error("Error decrementing trial:", error);
+          toast.error("Failed to use trial");
+          return;
+        }
+      }
+
       try {
         setIsGenerating(true);
         const coverLetter = await generateCoverLetterAPI(
@@ -149,6 +172,7 @@ export default function CoverLetterForm({ resume }: CoverLetterFormProps) {
         );
         setGeneratedCoverLetter(coverLetter);
         toast.success("Cover letter generated successfully!");
+        await refreshSubscription();
       } catch (error) {
         console.error("Error generating cover letter:", error);
         toast.error("Failed to generate cover letter");
@@ -172,7 +196,6 @@ export default function CoverLetterForm({ resume }: CoverLetterFormProps) {
         setShowUpgradeDialog(true);
         return;
       }
-
       setIsGenerating(true);
       const coverLetter = await generateCoverLetterAPI(
         user.uid,
@@ -182,6 +205,7 @@ export default function CoverLetterForm({ resume }: CoverLetterFormProps) {
       );
       setGeneratedCoverLetter(coverLetter);
       toast.success("Cover letter generated successfully!");
+      await refreshSubscription();
     } catch (error) {
       console.error("Error generating cover letter:", error);
       toast.error("Failed to generate cover letter");

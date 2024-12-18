@@ -134,9 +134,8 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
 
 export async function cancelSubscription(userId: string): Promise<void> {
   const subscriptionDoc = await db.collection('subscriptions').doc(userId).get();
-  
   if (!subscriptionDoc.exists) {
-    throw new Error('No subscription found for user');
+    throw new Error('No subscription found');
   }
 
   const data = subscriptionDoc.data();
@@ -144,8 +143,17 @@ export async function cancelSubscription(userId: string): Promise<void> {
     throw new Error('No Stripe subscription ID found');
   }
 
-  await stripe.subscriptions.del(data.stripeSubscriptionId);
-  await updateSubscriptionInFirestore(userId, null, null);
+  // Update the subscription to cancel at period end instead of immediate cancellation
+  const subscription = await stripe.subscriptions.update(data.stripeSubscriptionId, {
+    cancel_at_period_end: true
+  });
+
+  // Update Firestore with the cancellation status but keep the renewal date
+  await updateSubscriptionInFirestore(
+    userId,
+    subscription,
+    data.priceId || null
+  );
 }
 
 async function findUserIdByCustomerId(customerId: string): Promise<string | null> {
@@ -163,6 +171,9 @@ async function updateSubscriptionInFirestore(
   subscription: Stripe.Subscription | null,
   priceId: string | null
 ): Promise<void> {
+  const subscriptionRef = db.collection('subscriptions').doc(userId);
+  const currentData = (await subscriptionRef.get()).data();
+
   const data = subscription ? {
     tier: getTierFromPriceId(priceId),
     status: subscription.status,
@@ -173,30 +184,27 @@ async function updateSubscriptionInFirestore(
   } : {
     tier: SubscriptionTier.FREE,
     status: 'none',
-    stripeSubscriptionId: null,
-    stripeCustomerId: null,
-    renewal_date: null,
+    // Preserve historical IDs
+    stripeSubscriptionId: currentData?.stripeSubscriptionId || null,
+    stripeCustomerId: currentData?.stripeCustomerId || null,
+    renewal_date: '',
     updated_at: new Date().toISOString(),
   };
 
   // Log to Firestore
   await logToFirestore({
     eventType: 'INFO',
-    message: 'Subscription status updated',
+    message: subscription ? 'Subscription status updated' : 'Subscription cancelled',
     data: {
       userId,
-      subscription_id: subscription?.id,
       status: data.status,
-      tier: data.tier
+      tier: data.tier,
+      ...(subscription ? { subscription_id: subscription.id } : {})
     },
     timestamp: new Date().toISOString(),
   });
 
-  if (!subscription) {
-    await db.collection('subscriptions').doc(userId).set(data);
-  } else {
-    await db.collection('subscriptions').doc(userId).set(data, { merge: true });
-  }
+  await subscriptionRef.set(data, { merge: true });
 }
 
 export async function createSubscriptionChangeSession(

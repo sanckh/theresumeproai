@@ -26,8 +26,9 @@ export const ResumeForm = ({ data, onChange }: ResumeFormProps) => {
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const navigate = useNavigate();
-  const { canUseFeature, subscriptionStatus } = useSubscription();
+  const { canUseFeature, hasSubscriptionAccess, subscriptionStatus, refreshSubscription } = useSubscription();
   const { user } = useAuth();
+  const hasSubscriptionResumeAccess = hasSubscriptionAccess('resume_pro');
 
   // Ensure data has default values
   const safeData = {
@@ -127,6 +128,25 @@ export const ResumeForm = ({ data, onChange }: ResumeFormProps) => {
 
     // First check if user has the correct subscription
     if (canUseFeature('resume_creator')) {
+      if (!hasSubscriptionResumeAccess) {
+        if (!subscriptionStatus?.trials?.resume_creator?.remaining || 
+            subscriptionStatus.trials.resume_creator.remaining <= 0) {
+          setShowUpgradeDialog(true);
+          return;
+        }
+        try {
+          const success = await decrementTrialUse(user.uid, 'resume_creator');
+          if (!success) {
+            setShowUpgradeDialog(true);
+            return;
+          }
+        } catch (error) {
+          console.error("Error decrementing trial:", error);
+          toast.error("Failed to use trial");
+          return;
+        }
+      }
+
       try {
         setIsEnhancing(true);
         const enhancedData = await enhanceWithAIAPI(user.uid, safeData);
@@ -146,6 +166,7 @@ export const ResumeForm = ({ data, onChange }: ResumeFormProps) => {
         } else {
           toast.error("No enhanced data received from the API");
         }
+        await refreshSubscription();
       } catch (error) {
         console.error("Error enhancing resume:", error);
         toast.error("Failed to enhance resume");
@@ -188,6 +209,7 @@ export const ResumeForm = ({ data, onChange }: ResumeFormProps) => {
       } else {
         toast.error("No enhanced data received from the API");
       }
+      await refreshSubscription();
     } catch (error) {
       console.error("Error enhancing resume:", error);
       toast.error("Failed to enhance resume");

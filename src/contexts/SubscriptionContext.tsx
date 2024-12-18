@@ -3,6 +3,7 @@ import { useAuth } from "./AuthContext";
 import { decrementTrialUse, getSubscriptionStatus, startTrial } from "../api/subscription";
 import { SubscriptionTier } from '@/enums/subscriptionTierEnum';
 import { SubscriptionStatus } from '@/interfaces/subscriptionStatus';
+import { TrialWelcomeDialog } from '@/components/TrialWelcomeDialog';
 
 interface SubscriptionContextType {
   subscriptionStatus: SubscriptionStatus | null;
@@ -10,6 +11,7 @@ interface SubscriptionContextType {
   error: string | null;
   tier?: SubscriptionTier;
   canUseFeature: (feature: string) => boolean;
+  hasSubscriptionAccess: (feature: string) => boolean;
   startTrial: () => Promise<void>;
   decrementTrialUse: (feature: 'resume_creator' | 'resume_pro' | 'career_pro') => Promise<void>;
   refreshSubscription: () => Promise<void>;
@@ -34,6 +36,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showTrialWelcome, setShowTrialWelcome] = useState(false);
 
   const refreshSubscription = async () => {
     try {
@@ -98,17 +101,30 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     return false;
   };
 
+  const hasSubscriptionAccess = (feature: string): boolean => {
+    if (!subscriptionStatus || subscriptionStatus.status !== 'active') return false;
+
+    switch (subscriptionStatus.tier) {
+      case SubscriptionTier.CAREER_PRO:
+        return true;
+      case SubscriptionTier.RESUME_PRO:
+        return feature !== 'career_pro';
+      case SubscriptionTier.RESUME_CREATOR:
+        return feature === 'resume_creator';
+      default:
+        return false;
+    }
+  };
+
   const handleStartTrial = async () => {
     try {
-      if (!user) throw new Error('User not authenticated');
-
-      const status = await startTrial(user.uid);
-      setSubscriptionStatus(status);
-      setError(null);
+      if (!user) return;
+      await startTrial(user.uid);
+      await refreshSubscription();
+      setShowTrialWelcome(true);
     } catch (err) {
       setError('Failed to start trial');
       console.error('Error starting trial:', err);
-      throw err;
     }
   };
 
@@ -148,6 +164,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
         error,
         tier: subscriptionStatus?.tier,
         canUseFeature,
+        hasSubscriptionAccess,
         startTrial: handleStartTrial,
         decrementTrialUse: handleDecrementTrialUse,
         refreshSubscription,
@@ -155,6 +172,10 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       }}
     >
       {children}
+      <TrialWelcomeDialog 
+        isOpen={showTrialWelcome} 
+        onClose={() => setShowTrialWelcome(false)} 
+      />
     </SubscriptionContext.Provider>
   );
 };

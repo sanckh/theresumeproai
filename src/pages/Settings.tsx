@@ -100,7 +100,7 @@ const Settings = () => {
                   </p>
                 </div>
                 <div className="pt-4">
-                  <Button variant="destructive">Delete Account</Button>
+                  {/* <Button variant="destructive">Delete Account</Button> */}
                 </div>
               </div>
             </Card>

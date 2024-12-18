@@ -4,11 +4,11 @@ import { ResumeForm } from "@/components/ResumeForm";
 import { ResumePreview } from "@/components/ResumePreview";
 import { Templates } from "@/components/Templates";
 import { ResumeReview } from "@/components/ResumeReview";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import {
@@ -41,6 +41,7 @@ const Builder = () => {
   const canCoverLetter = canUseFeature('career_pro');
   const navigate = useNavigate();
   const resumeRef = useRef<HTMLDivElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
   const [resumeData, setResumeData] = useState<ResumeData>({
     id: "",
     user_id: "",
@@ -64,6 +65,10 @@ const Builder = () => {
   const [currentResumeId, setCurrentResumeId] = useState<string | null>(null);
   const [currentResumeName, setCurrentResumeName] = useState("Untitled Resume");
   const [isEditingName, setIsEditingName] = useState(false);
+  const hasAnyTrialsRemaining = (subscriptionStatus?.trials?.resume_creator?.remaining && 
+    subscriptionStatus.trials.resume_creator.remaining > 0) || (subscriptionStatus?.trials?.resume_pro?.remaining && 
+      subscriptionStatus.trials.resume_pro.remaining > 0) || (subscriptionStatus?.trials?.career_pro?.remaining && 
+        subscriptionStatus.trials.career_pro.remaining > 0);
 
   useEffect(() => {
     if (!user) {
@@ -72,10 +77,20 @@ const Builder = () => {
   }, [user, navigate]);
 
   useEffect(() => {
-    if (!canCreate) {
-      navigate('/pricing');
+    if (!canCreate && (!hasAnyTrialsRemaining)) {
+      toast.message(
+        "You've used all your trial credits", 
+        {
+          description: "Make sure to save or download your resume before leaving. Visit our pricing page to continue using all features.",
+          duration: 15000,
+          action: {
+            label: "View Plans",
+            onClick: () => navigate('/pricing')
+          }
+        }
+      );
     }
-  }, [canCreate, navigate]);
+  }, [canCreate, hasAnyTrialsRemaining, navigate]);
 
   // Load saved resumes into dropdown but don't auto-select
   useEffect(() => {
@@ -224,51 +239,35 @@ const Builder = () => {
     }
   };
 
-  const handleDownload = async () => {
-    if (!resumeRef.current || isDownloading) return;
-
+  const handleDownloadPDF = async () => {
+    if (!previewRef.current) return;
+    
     try {
       setIsDownloading(true);
-      toast.info("Preparing your PDF...");
-
-      // Create a clone of the resume preview for better PDF generation
-      const resumeElement = resumeRef.current;
-      const scale = 2; // Increase quality
-
-      const canvas = await html2canvas(resumeElement, {
-        scale: scale,
+      
+      const canvas = await html2canvas(previewRef.current, {
+        scale: 2, // Higher quality
         useCORS: true,
         logging: false,
-        backgroundColor: "#ffffff",
+        backgroundColor: '#ffffff'
       });
-
+      
       const imgWidth = 210; // A4 width in mm
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
+      
       const pdf = new jsPDF({
-        orientation: imgHeight > imgWidth ? "portrait" : "landscape",
-        unit: "mm",
+        orientation: imgHeight > imgWidth ? 'portrait' : 'landscape',
+        unit: 'mm'
       });
-
-      pdf.addImage(
-        canvas.toDataURL("image/jpeg", 1.0),
-        "JPEG",
-        0,
-        0,
-        imgWidth,
-        imgHeight
-      );
-
-      // Generate filename based on user's name or default
-      const fileName = resumeData.data.fullName
-        ? `${resumeData.data.fullName.replace(/\s+/g, "_")}_Resume.pdf`
-        : "Resume.pdf";
-
-      pdf.save(fileName);
-      toast.success("Resume downloaded successfully!");
+      
+      const imgData = canvas.toDataURL('image/jpeg', 1.0);
+      pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+      
+      pdf.save(`${currentResumeName || 'resume'}.pdf`);
+      toast.success('Resume downloaded successfully!');
     } catch (error) {
-      console.error("Error generating PDF:", error);
-      toast.error("Failed to generate PDF. Please try again.");
+      console.error('Error downloading PDF:', error);
+      toast.error('Failed to download resume');
     } finally {
       setIsDownloading(false);
     }
@@ -320,6 +319,19 @@ const Builder = () => {
                     <Save className="h-4 w-4" />
                   )}
                   Save
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex items-center gap-2"
+                  onClick={handleDownloadPDF}
+                  disabled={isDownloading}
+                >
+                  {isDownloading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <FileText className="h-4 w-4" />
+                  )}
+                  Download PDF
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -389,7 +401,7 @@ const Builder = () => {
                       />
                     </div>
                     <div className="space-y-6">
-                      <div ref={resumeRef}>
+                      <div ref={previewRef}>
                         <ResumePreview
                           data={resumeData}
                           template={selectedTemplate}
