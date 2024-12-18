@@ -229,7 +229,7 @@ async function updateSubscriptionInFirestore(
   // Log to Firestore
   await logToFirestore({
     eventType: 'INFO',
-    message: subscription ? 'Subscription status updated' : 'Subscription cancelled',
+    message: subscription ? 'Subscription status updated' : 'Subscription canceled',
     data: {
       userId,
       status: data.status,

@@ -19,7 +19,6 @@ import coverLetterRoutes from './src/routes/coverLetterRoutes';
 import openAiRoutes from './src/routes/openAiRoutes';
 import bugRoutes from './src/routes/bugRoutes';
 
-export { checkExpiredSubscriptions } from './src/functions/checkExpiredSubscriptions';
 
 const app = express();
 const port = Number(process.env.PORT) || 3000;

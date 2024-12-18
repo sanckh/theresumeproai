@@ -8,7 +8,8 @@
     "dev": "ts-node index.ts",
     "build": "rimraf dist && tsc",
     "watch": "tsc -w",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint ."
   },
   "keywords": [],
   "author": "",

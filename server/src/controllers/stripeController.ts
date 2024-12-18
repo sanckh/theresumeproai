@@ -116,12 +116,12 @@ export const cancelSubscriptionForUser = async (req: Request, res: Response) => 
     
     await logToFirestore({
       eventType: 'INFO',
-      message: 'Subscription cancelled successfully',
+      message: 'Subscription canceled successfully',
       data: { userId },
       timestamp: new Date().toISOString(),
     });
 
-    res.json({ message: 'Subscription cancelled successfully' });
+    res.json({ message: 'Subscription canceled successfully' });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error('Error cancelling subscription:', errorMessage);

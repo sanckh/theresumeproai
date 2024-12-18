@@ -27,7 +27,7 @@ export function CancelSubscriptionDialog() {
     try {
       await cancelSubscription(user.uid);
       await refreshSubscription();
-      toast.success('Subscription cancelled successfully');
+      toast.success('Subscription canceled successfully');
       setIsOpen(false);
     } catch (error) {
       console.error('Error cancelling subscription:', error);
