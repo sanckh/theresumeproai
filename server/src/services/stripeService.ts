@@ -128,6 +128,8 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
       status: 'canceled',  
       hasStartedTrial: false,
       renewal_date: null,
+      subscription_end_date: null,
+      is_active: false,
       trials: {
         resume_creator: { remaining: 0 },
         resume_pro: { remaining: 0 },
@@ -137,12 +139,19 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
   }
 
   const data = userDoc.data();
+  const now = new Date().getTime();
+  const endDate = data?.subscription_end_date ? new Date(data.subscription_end_date).getTime() : null;
+  
+  // A subscription is active if it's marked as active OR if it's canceled but still within the paid period
+  const isActive = data?.is_active || (endDate && now < endDate);
+
   return {
-    tier: data?.tier || SubscriptionTier.FREE,
+    tier: isActive ? (data?.tier || SubscriptionTier.FREE) : SubscriptionTier.FREE,
     status: data?.stripeSubscriptionId ? (data?.status || 'canceled') : 'canceled',
     subscription_end_date: data?.subscription_end_date,
     renewal_date: data?.renewal_date,
     hasStartedTrial: data?.hasStartedTrial || false,
+    is_active: isActive,
     trials: {
       resume_creator: { remaining: data?.resume_creator?.remaining || 0 },
       resume_pro: { remaining: data?.resume_pro?.remaining || 0 },
@@ -202,6 +211,8 @@ async function updateSubscriptionInFirestore(
     stripeSubscriptionId: subscription.id,
     stripeCustomerId: subscription.customer,
     renewal_date: subscription.current_period_end ? new Date(subscription.current_period_end * 1000).toISOString() : null,
+    subscription_end_date: subscription.cancel_at_period_end ? new Date(subscription.current_period_end * 1000).toISOString() : null,
+    is_active: subscription.status === 'active' || (subscription.status === 'canceled' && subscription.current_period_end * 1000 > Date.now()),
     updated_at: new Date().toISOString(),
   } : {
     tier: SubscriptionTier.FREE,
@@ -209,7 +220,9 @@ async function updateSubscriptionInFirestore(
     // Preserve historical IDs
     stripeSubscriptionId: currentData?.stripeSubscriptionId || null,
     stripeCustomerId: currentData?.stripeCustomerId || null,
-    renewal_date: '',
+    renewal_date: null,
+    subscription_end_date: null,
+    is_active: false,
     updated_at: new Date().toISOString(),
   };
 
@@ -221,6 +234,7 @@ async function updateSubscriptionInFirestore(
       userId,
       status: data.status,
       tier: data.tier,
+      is_active: data.is_active,
       ...(subscription ? { subscription_id: subscription.id } : {})
     },
     timestamp: new Date().toISOString(),

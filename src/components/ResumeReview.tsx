@@ -50,12 +50,6 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
   const [resumeSource, setResumeSource] = useState<"upload" | "saved">(savedResume ? "saved" : "upload");
 
   useEffect(() => {
-    if (!hasResumeProAccess && !hasCareerProAccess) {
-      navigate('/pricing');
-    }
-  }, [hasResumeProAccess, hasCareerProAccess, navigate]);
-
-  useEffect(() => {
     if (savedResume) {
       setFile(null);
       if (fileInputRef.current) {
@@ -143,11 +137,8 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
         }
 
         try {
-          const success = await decrementTrialUse(user.uid, 'resume_pro');
-          if (!success) {
-            setShowUpgradeDialog(true);
-            return;
-          }
+          await decrementTrialUse(user.uid, 'resume_pro');
+          await refreshSubscription();
         } catch (error) {
           console.error("Error decrementing trial:", error);
           toast.error("Failed to use trial");
@@ -178,15 +169,11 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
 
     try {
       console.log("Decrementing trial usage...");
-      const success = await decrementTrialUse(user.uid, 'resume_pro');
-      if (!success) {
-        setShowUpgradeDialog(true);
-        return;
-      }
+      await decrementTrialUse(user.uid, 'resume_pro');
+      await refreshSubscription();
       setShouldAnalyze(true);
       const result = await analyzeResumeAPI(user.uid, parsedResume);
       setAnalysis(result);
-      await refreshSubscription();
       toast.success("Resume analysis completed!");
     } catch (error) {
       console.error("Error analyzing resume:", error);

@@ -54,6 +54,7 @@
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.3.0",
     "firebase": "^11.0.2",
+    "firebase-functions": "^6.1.2",
     "gpt-tokenizer": "^2.6.2",
     "html2canvas": "^1.4.1",
     "input-otp": "^1.2.4",

@@ -1,4 +1,4 @@
-import { SubscriptionTier } from "@/enums/subscriptionTierEnum";
+import { SubscriptionTier } from '../enums/subscriptionTierEnum';
 
 export interface SubscriptionStatus {
     status: 'none' | 'active' | 'canceled' | 'incomplete' | 'incomplete_expired' | 'past_due' | 'trialing' | 'unpaid';

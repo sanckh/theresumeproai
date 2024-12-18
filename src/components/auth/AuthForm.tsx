@@ -107,7 +107,7 @@ export const AuthForm = ({ isSignUp, onToggleMode }: AuthFormProps) => {
             "Account created successfully! ",
             {
               description: "Please check your email to verify your account before signing in.",
-              duration: 30000,
+              duration: 10000,
               className: "bg-primary/10 border-primary text-lg",
               action: {
                 label: "Resend Email",

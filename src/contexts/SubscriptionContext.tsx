@@ -26,7 +26,8 @@ const defaultSubscriptionStatus: SubscriptionStatus = {
     resume_creator: { remaining: 0 },
     resume_pro: { remaining: 0 },
     career_pro: { remaining: 0 }
-  }
+  },
+  is_active: false
 };
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);

@@ -14,4 +14,5 @@ export interface SubscriptionStatus {
   stripeSubscriptionId?: string;
   stripeCustomerId?: string;
   updated_at?: string;
+  is_active: boolean;
 }
