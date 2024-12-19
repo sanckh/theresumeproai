@@ -5,6 +5,7 @@ import { STRIPE_CONFIG } from '../config/stripe';
 import { getTierFromPriceId } from '../config/stripe';
 import { SubscriptionStatus } from '../interfaces/subscriptionStatus';
 import { SubscriptionTier } from '../enums/subscriptionTier';
+import { Timestamp } from 'firebase-admin/firestore';
 
 const stripe = new Stripe(STRIPE_CONFIG.STRIPE_API_KEY!, {
   apiVersion: '2022-11-15',
@@ -140,7 +141,9 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
 
   const data = userDoc.data();
   const now = new Date().getTime();
-  const endDate = data?.subscription_end_date ? new Date(data.subscription_end_date).getTime() : null;
+  const endDate = data?.subscription_end_date 
+  ? data.subscription_end_date.toDate().getTime() 
+  : null;
   
   // A subscription is active if it's marked as active OR if it's canceled but still within the paid period
   const isActive = data?.is_active || (endDate && now < endDate);
@@ -211,8 +214,9 @@ async function updateSubscriptionInFirestore(
     stripeSubscriptionId: subscription.id,
     stripeCustomerId: subscription.customer,
     renewal_date: subscription.current_period_end ? new Date(subscription.current_period_end * 1000).toISOString() : null,
-    subscription_end_date: subscription.cancel_at_period_end ? new Date(subscription.current_period_end * 1000).toISOString() : null,
-    is_active: subscription.status === 'active' || (subscription.status === 'canceled' && subscription.current_period_end * 1000 > Date.now()),
+    subscription_end_date: subscription.cancel_at_period_end
+    ? Timestamp.fromDate(new Date(subscription.current_period_end * 1000))
+    : null,    is_active: subscription.status === 'active' || (subscription.status === 'canceled' && subscription.current_period_end * 1000 > Date.now()),
     updated_at: new Date().toISOString(),
   } : {
     tier: SubscriptionTier.FREE,

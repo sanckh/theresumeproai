@@ -3,6 +3,7 @@ import { AuthenticatedRequest } from '../interfaces/authenticatedRequest';
 import * as subscriptionService from '../services/subscriptionService';
 import { handleWebhook } from '../services/stripeService';
 import { SubscriptionTier } from '../enums/subscriptionTier';
+import { Timestamp } from 'firebase-admin/firestore';
 
 export async function getSubscriptionStatus(req: AuthenticatedRequest, res: Response) {
   try {
@@ -30,8 +31,9 @@ export async function createSubscription(req: AuthenticatedRequest, res: Respons
 
     const subscription = await subscriptionService.createSubscription(userId, {
       tier: tier as SubscriptionTier,
-      subscription_end_date: duration ? new Date(Date.now() + duration * 30 * 24 * 60 * 60 * 1000).toISOString() : null
-    });
+      subscription_end_date: duration 
+      ? Timestamp.fromDate(new Date(Date.now() + duration * 30 * 24 * 60 * 60 * 1000))
+      : null    });
 
     res.json({ subscription });
   } catch (error) {
