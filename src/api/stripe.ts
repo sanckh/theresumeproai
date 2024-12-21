@@ -1,4 +1,5 @@
-import { auth } from '../config/firebase';
+import { auth, analytics } from '../config/firebase';
+import { logEvent } from 'firebase/analytics';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -28,6 +29,15 @@ export const createCheckoutSession = async (userId: string, priceId: string): Pr
     }
 
     const { url } = await response.json();
+    
+    // Track checkout initiation
+    if (analytics) {
+      logEvent(analytics, 'begin_checkout', {
+        user_id: userId,
+        price_id: priceId
+      });
+    }
+    
     return url;
   } catch (error) {
     console.error('Error creating checkout session:', error);
@@ -50,6 +60,15 @@ export const changeSubscription = async (
       throw new Error('Failed to create subscription change session');
     }
     const data = await response.json();
+    
+    // Track subscription change
+    if (analytics) {
+      logEvent(analytics, 'subscription_change', {
+        user_id: userId,
+        new_price_id: newPriceId
+      });
+    }
+    
     return data.url;
   } catch (error) {
     console.error('Error changing subscription:', error);

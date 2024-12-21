@@ -260,3 +260,10 @@ export async function createSubscriptionChangeSession(
 
   return session.url;
 }
+
+export async function getStripeSession(sessionId: string): Promise<Stripe.Checkout.Session> {
+  const session = await stripe.checkout.sessions.retrieve(sessionId, {
+    expand: ['line_items.data.price.product']
+  });
+  return session;
+}

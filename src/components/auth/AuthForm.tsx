@@ -17,6 +17,8 @@ import * as z from "zod";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { resendVerificationEmail } from "@/api/auth";
+import { logEvent } from "firebase/analytics";
+import { analytics } from "@/config/firebase";
 
 const baseSchema = {
   email: z.string().email("Please enter a valid email address"),
@@ -85,6 +87,11 @@ export const AuthForm = ({ isSignUp, onToggleMode }: AuthFormProps) => {
     try {
       if (isSignUp) {
         const { error, confirmEmail } = await signUp(data.email, data.password);
+        if (!error && analytics) {
+          logEvent(analytics, 'sign_up', {
+            method: 'email'
+          });
+        }
         if (error) {
           // Handle Firebase auth errors
           const errorCode = (error as { code?: string }).code;

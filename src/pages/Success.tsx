@@ -4,6 +4,9 @@ import { useSubscription } from "@/contexts/SubscriptionContext";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
 import { toast } from "sonner";
+import { analytics } from "@/config/firebase";
+import { logEvent } from "firebase/analytics";
+import { getTierFromPriceId } from "@/config/stripeClient";
 
 const Success = () => {
   const navigate = useNavigate();
@@ -17,18 +20,43 @@ const Success = () => {
       return;
     }
 
+    const trackPurchase = async (sessionId: string) => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/stripe/session/${sessionId}`);
+        if (!response.ok) throw new Error('Failed to fetch session details');
+        
+        const { amount, currency, subscription } = await response.json();
+        const tier = getTierFromPriceId(subscription.priceId);
+        
+        if (analytics) {
+          logEvent(analytics, 'purchase', {
+            transaction_id: sessionId,
+            value: amount / 100,
+            currency: currency,
+            items: [{
+              item_id: subscription.priceId,
+              item_name: tier,
+              price: amount / 100
+            }]
+          });
+        }
+      } catch (error) {
+        console.error('Error tracking purchase:', error);
+      }
+    };
+
     // Give Stripe webhook a moment to process
-    setTimeout(() => {
-      checkSubscription()
-        .then(() => {
-          setStatus('success');
-          toast.success('Your subscription is now active!');
-        })
-        .catch((error) => {
-          console.error('Error checking subscription:', error);
-          setStatus('error');
-          toast.error('There was an error activating your subscription');
-        });
+    setTimeout(async () => {
+      try {
+        await trackPurchase(sessionId);
+        await checkSubscription();
+        setStatus('success');
+        toast.success('Your subscription is now active!');
+      } catch (error) {
+        console.error('Error checking subscription:', error);
+        setStatus('error');
+        toast.error('There was an error activating your subscription');
+      }
     }, 2000);
   }, []);
 

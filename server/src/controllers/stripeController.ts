@@ -6,7 +6,8 @@ import {
   getSubscriptionStatus,
   cancelSubscription,
   constructWebhookEvent,
-  createSubscriptionChangeSession
+  createSubscriptionChangeSession,
+  getStripeSession
 } from '../services/stripeService';
 
 export const createCheckoutSessionForUser = async (req: Request, res: Response) => {
@@ -145,3 +146,29 @@ export async function createChangeSubscriptionSession(req: Request, res: Respons
     res.status(500).json({ error: 'Failed to create subscription change session' });
   }
 }
+
+export const getSessionDetails = async (req: Request, res: Response) => {
+  try {
+    const { sessionId } = req.params;
+    const session = await getStripeSession(sessionId);
+    
+    res.json({
+      amount: session.amount_total,
+      currency: session.currency,
+      subscription: {
+        priceId: session.line_items?.data[0]?.price?.id,
+        productId: session.line_items?.data[0]?.price?.product
+      }
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('Error retrieving session:', errorMessage);
+    await logToFirestore({
+      eventType: 'ERROR',
+      message: 'Failed to retrieve session details',
+      data: { error: errorMessage },
+      timestamp: new Date().toISOString(),
+    });
+    res.status(500).json({ error: errorMessage });
+  }
+};

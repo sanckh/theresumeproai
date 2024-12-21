@@ -1,6 +1,7 @@
 import { SubscriptionTier } from '@/enums/subscriptionTierEnum';
-import { auth } from '../config/firebase';
+import { analytics, auth } from '../config/firebase';
 import { SubscriptionStatus } from '@/interfaces/subscriptionStatus';
+import { logEvent } from 'firebase/analytics';
 const API_URL = import.meta.env.VITE_API_URL;
 
 const getAuthHeaders = async () => {
@@ -44,6 +45,13 @@ export const startTrial = async (userId: string): Promise<SubscriptionStatus> =>
       throw new Error('Failed to start trial');
     }
     const data = await response.json();
+    
+    if (analytics) {
+      logEvent(analytics, 'begin_trial', {
+        user_id: userId
+      });
+    }
+    
     return data.subscription;
   } catch (error) {
     console.error('Error starting trial:', error);
@@ -89,6 +97,15 @@ export const createSubscription = async (
       throw new Error('Failed to create subscription');
     }
     const data = await response.json();
+    
+    if (analytics) {
+      logEvent(analytics, 'subscription_created', {
+        user_id: userId,
+        tier: tier,
+        duration: duration
+      });
+    }
+    
     return data.subscription;
   } catch (error) {
     console.error('Error creating subscription:', error);
@@ -108,6 +125,13 @@ export const cancelSubscription = async (userId: string): Promise<SubscriptionSt
       throw new Error('Failed to cancel subscription');
     }
     const data = await response.json();
+    
+    if (analytics) {
+      logEvent(analytics, 'subscription_cancelled', {
+        user_id: userId
+      });
+    }
+    
     return data.subscription;
   } catch (error) {
     console.error('Error canceling subscription:', error);
