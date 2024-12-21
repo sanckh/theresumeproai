@@ -4,9 +4,8 @@ import { useSubscription } from "@/contexts/SubscriptionContext";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
 import { toast } from "sonner";
-import { analytics } from "@/config/firebase";
-import { logEvent } from "firebase/analytics";
 import { getTierFromPriceId } from "@/config/stripeClient";
+import { trackRevenue } from "@/utils/analytics";
 
 const Success = () => {
   const navigate = useNavigate();
@@ -28,18 +27,16 @@ const Success = () => {
         const { amount, currency, subscription } = await response.json();
         const tier = getTierFromPriceId(subscription.priceId);
         
-        if (analytics) {
-          logEvent(analytics, 'purchase', {
-            transaction_id: sessionId,
-            value: amount / 100,
-            currency: currency,
-            items: [{
-              item_id: subscription.priceId,
-              item_name: tier,
-              price: amount / 100
-            }]
-          });
-        }
+        trackRevenue({
+          transaction_id: sessionId,
+          value: amount / 100,
+          currency: currency,
+          items: [{
+            item_id: subscription.priceId,
+            item_name: tier,
+            price: amount / 100
+          }]
+        });
       } catch (error) {
         console.error('Error tracking purchase:', error);
       }

@@ -30,7 +30,6 @@ export const createCheckoutSession = async (userId: string, priceId: string): Pr
 
     const { url } = await response.json();
     
-    // Track checkout initiation
     if (analytics) {
       logEvent(analytics, 'begin_checkout', {
         user_id: userId,

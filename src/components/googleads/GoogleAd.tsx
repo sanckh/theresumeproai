@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { GoogleAdProps } from '@/interfaces/googleAdProps';
 import { useEffect } from 'react';
+import { trackAdEvent } from '@/utils/analytics';
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 
@@ -14,12 +15,33 @@ export const GoogleAd: React.FC<GoogleAdProps> = ({
   useEffect(() => {
     if (!isDevelopment) {
       try {
+        trackAdEvent('impression', {
+          ad_unit_id: adSlot,
+          format: adFormat,
+          platform: 'adsense'
+        });
+
         ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
+
+        const adContainer = document.querySelector(`[data-ad-slot="${adSlot}"]`);
+        const handleAdClick = () => {
+          trackAdEvent('click', {
+            ad_unit_id: adSlot,
+            format: adFormat,
+            platform: 'adsense'
+          });
+        };
+
+        adContainer?.addEventListener('click', handleAdClick);
+
+        return () => {
+          adContainer?.removeEventListener('click', handleAdClick);
+        };
       } catch (error) {
         console.error('Error loading Google AdSense:', error);
       }
     }
-  }, []);
+  }, [adSlot, adFormat]);
 
   if (isDevelopment) {
     type AdSize = {
@@ -28,7 +50,6 @@ export const GoogleAd: React.FC<GoogleAdProps> = ({
       minHeight?: string;
     };
 
-    // Common ad sizes for reference
     const adSizes: Record<string, AdSize> = {
       'Responsive': { width: '100%', minHeight: '250px' },
       'Large Rectangle': { width: '336px', height: '280px' },
@@ -37,7 +58,6 @@ export const GoogleAd: React.FC<GoogleAdProps> = ({
       'Mobile Banner': { width: '320px', height: '100px' }
     };
 
-    // Use responsive size for auto format
     const size = adFormat === 'auto' ? adSizes.Responsive : adSizes['Medium Rectangle'];
     const heightStyle = size.minHeight ? { minHeight: size.minHeight } : { height: size.height };
 
@@ -101,15 +121,15 @@ export const GoogleAd: React.FC<GoogleAdProps> = ({
   }
 
   return (
-    <>
-      <ins
-        className="adsbygoogle"
-        style={style}
-        data-ad-client={adClient}
-        data-ad-slot={adSlot}
-        data-ad-format={adFormat}
-        data-full-width-responsive={fullWidthResponsive}
-      />
-    </>
+    <ins
+      className="adsbygoogle"
+      style={style}
+      data-ad-client={adClient}
+      data-ad-slot={adSlot}
+      data-ad-format={adFormat}
+      data-full-width-responsive={fullWidthResponsive}
+    />
   );
 };
+
+export default GoogleAd;
