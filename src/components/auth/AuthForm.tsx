@@ -60,7 +60,7 @@ const defaultValues = {
 export const AuthForm = ({ isSignUp, onToggleMode }: AuthFormProps) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
 
   const form = useForm<FormData>({
@@ -89,7 +89,8 @@ export const AuthForm = ({ isSignUp, onToggleMode }: AuthFormProps) => {
         const { error, confirmEmail } = await signUp(data.email, data.password);
         if (!error && analytics) {
           logEvent(analytics, 'sign_up', {
-            method: 'email'
+            method: 'email',
+            user_id: user?.uid
           });
         }
         if (error) {

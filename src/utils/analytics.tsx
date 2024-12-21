@@ -1,8 +1,10 @@
-import { AdEventParams } from '@/interfaces/adEventParams';
 import { analytics } from '../config/firebase';
 import { logEvent } from 'firebase/analytics';
+import { AdEventParams } from '@/interfaces/adEventParams';
 import { RevenueEventParams } from '@/interfaces/revenueEventParams';
 import { AdEventType } from '@/types/adEventType';
+import { ConversionStep } from '@/types/conversionStep';
+import { ConversionParams } from '@/interfaces/conversionParams';
 
 export const trackPageView = (page_title: string, page_path: string) => {
   if (analytics) {
@@ -21,8 +23,13 @@ export const trackUserEngagement = (engagement_type: string) => {
   }
 };
 
-export const trackUserSignUp = (method: string) => {
+export const trackUserSignUp = (method: string, userId?: string) => {
   if (analytics) {
+    trackConversion({
+      step: 'sign_up',
+      method,
+      userId
+    });
     logEvent(analytics, 'sign_up', {
       method
     });
@@ -46,6 +53,12 @@ export const trackAdEvent = (type: AdEventType, params: AdEventParams) => {
 export const trackRevenue = (params: RevenueEventParams) => {
   if (analytics) {
     logEvent(analytics, 'purchase', params);
+    
+    trackConversion({
+      step: 'subscription_purchase',
+      value: params.value,
+      tier: params.items[0]?.item_name
+    });
   }
 };
 
@@ -60,6 +73,27 @@ export const trackCombinedRevenue = (
       ad_revenue: adRevenue,
       total_revenue: subscriptionRevenue + adRevenue,
       currency
+    });
+  }
+};
+
+// Conversion Funnel Tracking
+export const trackConversion = (params: ConversionParams) => {
+  if (analytics) {
+    logEvent(analytics, 'conversion_step', {
+      ...params,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+// Trial Tracking
+export const trackTrialStart = (userId: string, tier: string) => {
+  if (analytics) {
+    trackConversion({
+      step: 'trial_start',
+      userId,
+      tier
     });
   }
 };

@@ -2,6 +2,7 @@ import { SubscriptionTier } from '@/enums/subscriptionTierEnum';
 import { analytics, auth } from '../config/firebase';
 import { SubscriptionStatus } from '@/interfaces/subscriptionStatus';
 import { logEvent } from 'firebase/analytics';
+import { trackTrialStart } from '@/utils/analytics';
 const API_URL = import.meta.env.VITE_API_URL;
 
 const getAuthHeaders = async () => {
@@ -33,26 +34,30 @@ export const getSubscriptionStatus = async (userId: string): Promise<Subscriptio
   }
 };
 
-export const startTrial = async (userId: string): Promise<SubscriptionStatus> => {
+export const startTrial = async (tier: string): Promise<void> => {
   try {
-    const headers = await getAuthHeaders();
+    const token = await auth.currentUser?.getIdToken();
+    if (!token) {
+      throw new Error('No authentication token available');
+    }
+
     const response = await fetch(`${API_URL}/subscription/trial/start`, {
       method: 'POST',
-      headers,
-      body: JSON.stringify({ userId })
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ tier })
     });
+
     if (!response.ok) {
       throw new Error('Failed to start trial');
     }
-    const data = await response.json();
-    
-    if (analytics) {
-      logEvent(analytics, 'begin_trial', {
-        user_id: userId
-      });
+
+    // Track trial start
+    if (auth.currentUser?.uid) {
+      trackTrialStart(auth.currentUser.uid, tier);
     }
-    
-    return data.subscription;
   } catch (error) {
     console.error('Error starting trial:', error);
     throw error;
