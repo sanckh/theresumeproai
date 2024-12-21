@@ -1,9 +1,10 @@
+import { Timestamp } from '@google-cloud/firestore';
 import { SubscriptionTier } from '../enums/subscriptionTierEnum';
 
 export interface SubscriptionStatus {
     status: 'none' | 'active' | 'canceled' | 'incomplete' | 'incomplete_expired' | 'past_due' | 'trialing' | 'unpaid';
     tier: SubscriptionTier;
-    subscription_end_date?: string | null;
+    subscription_end_date?: Timestamp;
     trials: {
       resume_creator: { remaining: number };
       resume_pro: { remaining: number };

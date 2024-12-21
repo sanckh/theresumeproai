@@ -75,7 +75,7 @@ async function getPaidSubscriptionStatus(userId: string): Promise<SubscriptionSt
   // Determine final status
   let finalStatus = userData.status;
   if (userData.subscription_end_date) {
-    const endDate = new Date(userData.subscription_end_date);
+    const endDate = userData.subscription_end_date.toDate();
     if (endDate < new Date()) {
       finalStatus = 'expired';
     }
@@ -83,8 +83,8 @@ async function getPaidSubscriptionStatus(userId: string): Promise<SubscriptionSt
 
   const result = {
     tier: userData.tier || SubscriptionTier.FREE,
-    status: userData.status || 'none',
-    subscription_end_date: userData.subscription_end_date,
+    status: finalStatus,
+    subscription_end_date: userData.subscription_end_date ? userData.subscription_end_date.toDate() : null,
     renewal_date: userData.renewal_date,
     stripeSubscriptionId: userData.stripeSubscriptionId,
     stripeCustomerId: userData.stripeCustomerId,

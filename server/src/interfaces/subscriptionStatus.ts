@@ -1,9 +1,10 @@
+import { Timestamp } from "firebase-admin/firestore";
 import { SubscriptionTier } from "../enums/subscriptionTier";
 
 export interface SubscriptionStatus {
   tier: SubscriptionTier;
   status: 'active' | 'canceled' | 'incomplete' | 'incomplete_expired' | 'past_due' | 'trialing' | 'unpaid' | 'none';
-  subscription_end_date?: string | null;
+  subscription_end_date?: Timestamp | null;
   renewal_date?: string | null;
   hasStartedTrial: boolean;
   trials: {

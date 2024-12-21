@@ -23,7 +23,7 @@ router.use(authenticateUser);
 if (process.env.NODE_ENV === 'development') {
   router.post('/test/check-expired', async (req, res) => {
     try {
-      const now = new Date().getTime();
+      const now = new Date().toISOString();
       const batch = db.batch();
       const expiredSubscriptions: string[] = [];
 
@@ -35,7 +35,7 @@ if (process.env.NODE_ENV === 'development') {
 
       subscriptionsSnapshot.forEach((doc) => {
         const data = doc.data();
-        const endDate = new Date(data.subscription_end_date).getTime();
+        const endDate = data.subscription_end_date
 
         if (endDate < now) {
           expiredSubscriptions.push(doc.id);
