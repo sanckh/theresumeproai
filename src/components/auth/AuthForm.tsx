@@ -19,6 +19,7 @@ import { useNavigate } from "react-router-dom";
 import { resendVerificationEmail } from "@/api/auth";
 import { logEvent } from "firebase/analytics";
 import { analytics } from "@/config/firebase";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 
 const baseSchema = {
   email: z.string().email("Please enter a valid email address"),
@@ -60,7 +61,9 @@ const defaultValues = {
 export const AuthForm = ({ isSignUp, onToggleMode }: AuthFormProps) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const { signIn, signUp, user } = useAuth();
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
+  const { signIn, signUp, user, resetPassword } = useAuth();
   const navigate = useNavigate();
 
   const form = useForm<FormData>({
@@ -80,6 +83,37 @@ export const AuthForm = ({ isSignUp, onToggleMode }: AuthFormProps) => {
       toast.success("Verification email sent! Please check your inbox.");
     } catch (error) {
       toast.error("Failed to resend verification email. Please try again.");
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();  // Prevent event from bubbling up to parent form
+    
+    if (!resetEmail) {
+      toast.error("Please enter your email address");
+      return;
+    }
+    setResetLoading(true);
+    try {
+      await resetPassword(resetEmail);
+      toast.success("Password reset email sent! Please check your inbox.");
+      setResetEmail("");
+    } catch (error) {
+      const errorCode = (error as { code?: string }).code;
+      let errorMessage = "Failed to send reset email";
+      
+      switch(errorCode) {
+        case 'auth/user-not-found':
+          errorMessage = "No account found with this email address";
+          break;
+        case 'auth/invalid-email':
+          errorMessage = "Please enter a valid email address";
+          break;
+      }
+      toast.error(errorMessage);
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -178,81 +212,48 @@ export const AuthForm = ({ isSignUp, onToggleMode }: AuthFormProps) => {
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="email"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email</FormLabel>
-              <FormControl>
-                <Input 
-                  type="email" 
-                  placeholder="Enter your email" 
-                  {...field} 
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="password"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Password</FormLabel>
-              <FormControl>
-                <div className="relative">
-                  <Input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter your password"
-                    {...field}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {isSignUp && (
+    <>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <FormField
             control={form.control}
-            name="confirmPassword"
+            name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Confirm Password</FormLabel>
+                <FormLabel>Email</FormLabel>
+                <FormControl>
+                  <Input 
+                    type="email" 
+                    placeholder="Enter your email" 
+                    {...field} 
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Password</FormLabel>
                 <FormControl>
                   <div className="relative">
                     <Input
-                      type={showConfirmPassword ? "text" : "password"}
-                      placeholder="Confirm your password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter your password"
                       {...field}
                     />
                     <Button
                       type="button"
                       variant="ghost"
-                      size="icon"
-                      className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowPassword(!showPassword)}
                     >
-                      {showConfirmPassword ? (
+                      {showPassword ? (
                         <EyeOff className="h-4 w-4" />
                       ) : (
                         <Eye className="h-4 w-4" />
@@ -264,28 +265,116 @@ export const AuthForm = ({ isSignUp, onToggleMode }: AuthFormProps) => {
               </FormItem>
             )}
           />
-        )}
 
-        <Button type="submit" className="w-full">
-          {isSignUp ? "Sign Up" : "Sign In"}
-        </Button>
+          {!isSignUp && (
+            <div className="flex justify-end">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="px-0 font-normal"
+                  >
+                    Forgot password?
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Reset Password</DialogTitle>
+                    <DialogDescription>
+                      Enter your email address and we'll send you a link to reset your password.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleForgotPassword} className="space-y-4">
+                    <div>
+                      <FormLabel htmlFor="resetEmail">Email</FormLabel>
+                      <Input
+                        id="resetEmail"
+                        type="email"
+                        value={resetEmail}
+                        onChange={(e) => setResetEmail(e.target.value)}
+                        placeholder="Enter your email"
+                        required
+                      />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <DialogClose asChild>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          onClick={() => {
+                            setResetEmail("");
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </DialogClose>
+                      <Button type="submit" disabled={resetLoading}>
+                        {resetLoading ? "Sending..." : "Send Reset Link"}
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </div>
+          )}
 
-        <div className="text-center">
-          <Button
-            type="button"
-            variant="link"
-            onClick={() => {
-              form.reset(defaultValues);
-              onToggleMode();
-            }}
-            className="text-sm"
-          >
-            {isSignUp
-              ? "Already have an account? Sign In"
-              : "Don't have an account? Sign Up"}
+          {isSignUp && (
+            <FormField
+              control={form.control}
+              name="confirmPassword"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Confirm Password</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Input
+                        type={showConfirmPassword ? "text" : "password"}
+                        placeholder="Confirm your password"
+                        {...field}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
+
+          <Button type="submit" className="w-full">
+            {isSignUp ? "Sign Up" : "Sign In"}
           </Button>
-        </div>
-      </form>
-    </Form>
+
+          <div className="text-center">
+            <Button
+              type="button"
+              variant="link"
+              onClick={() => {
+                form.reset(defaultValues);
+                onToggleMode();
+              }}
+              className="text-sm"
+            >
+              {isSignUp
+                ? "Already have an account? Sign In"
+                : "Don't have an account? Sign Up"}
+            </Button>
+          </div>
+        </form>
+      </Form>
+    </>
   );
 };

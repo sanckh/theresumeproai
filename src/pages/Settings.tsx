@@ -6,19 +6,29 @@ import { Button } from "@/components/ui/button";
 import { Header } from "@/components/Header";
 import { CreditCard, User, Bug } from "lucide-react";
 import { CancelSubscriptionDialog } from '@/components/CancelSubscriptionDialog';
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { reportBug } from "@/api/bug";
+import { useNavigate } from "react-router-dom";
 
 const Settings = () => {
-  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { user, updateUserPassword, signOut } = useAuth();
   const { subscriptionStatus, loading } = useSubscription();
   const [bugReportOpen, setBugReportOpen] = useState(false);
   const [bugReport, setBugReport] = useState({ title: "", description: "" });
   const [submitting, setSubmitting] = useState(false);
+  const [passwordUpdateOpen, setPasswordUpdateOpen] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordUpdateLoading, setPasswordUpdateLoading] = useState(false);
 
   const handleBugReport = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,16 +44,41 @@ const Settings = () => {
     }
   };
 
-  if (!user) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <Card className="p-6 text-center">
-          <h2 className="text-xl font-semibold mb-2">Please Sign In</h2>
-          <p className="text-gray-600">Sign in to view your settings</p>
-        </Card>
-      </div>
-    );
-  }
+  const handlePasswordUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError("");
+    
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordError("New passwords do not match");
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 6) {
+      setPasswordError("New password must be at least 6 characters long");
+      return;
+    }
+
+    setPasswordUpdateLoading(true);
+    try {
+      await updateUserPassword(passwordForm.currentPassword, passwordForm.newPassword);
+      setPasswordUpdateOpen(false);
+      setPasswordForm({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+    } catch (error) {
+      setPasswordError("Failed to update password. Please check your current password and try again.");
+    } finally {
+      setPasswordUpdateLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!user) {
+      navigate("/auth");
+    }
+  }, [user, navigate]);
 
   if (loading) {
     return (
@@ -99,8 +134,24 @@ const Settings = () => {
                     {new Date(user.metadata.creationTime).toLocaleDateString()}
                   </p>
                 </div>
-                <div className="pt-4">
-                  {/* <Button variant="destructive">Delete Account</Button> */}
+                <div className="pt-4 space-y-4">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setPasswordUpdateOpen(true)}
+                    className="w-full sm:w-auto"
+                  >
+                    Update Password
+                  </Button>
+                  <Button 
+                    variant="destructive" 
+                    onClick={async () => {
+                      await signOut();
+                      navigate("/");
+                    }}
+                    className="w-full sm:w-auto"
+                  >
+                    Sign Out
+                  </Button>
                 </div>
               </div>
             </Card>
@@ -139,7 +190,6 @@ const Settings = () => {
                     <a href="/pricing">Manage Subscription</a>
                   </Button>
                   
-                  {/* Only show cancel button if user has an active subscription */}
                   {subscriptionStatus?.tier !== 'free' && (
                     <div className="pt-2">
                       <CancelSubscriptionDialog />
@@ -187,6 +237,72 @@ const Settings = () => {
                 </Button>
                 <Button type="submit" disabled={submitting}>
                   {submitting ? "Submitting..." : "Submit"}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={passwordUpdateOpen} onOpenChange={setPasswordUpdateOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Update Password</DialogTitle>
+              <DialogDescription>
+                Enter your current password and choose a new password.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handlePasswordUpdate} className="space-y-4">
+              {passwordError && (
+                <p className="text-sm text-red-500">{passwordError}</p>
+              )}
+              <div>
+                <Label htmlFor="currentPassword">Current Password</Label>
+                <Input
+                  id="currentPassword"
+                  type="password"
+                  value={passwordForm.currentPassword}
+                  onChange={(e) => setPasswordForm(prev => ({ ...prev, currentPassword: e.target.value }))}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="newPassword">New Password</Label>
+                <Input
+                  id="newPassword"
+                  type="password"
+                  value={passwordForm.newPassword}
+                  onChange={(e) => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                  required
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => {
+                    setPasswordUpdateOpen(false);
+                    setPasswordError("");
+                    setPasswordForm({
+                      currentPassword: "",
+                      newPassword: "",
+                      confirmPassword: "",
+                    });
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={passwordUpdateLoading}>
+                  {passwordUpdateLoading ? "Updating..." : "Update Password"}
                 </Button>
               </div>
             </form>

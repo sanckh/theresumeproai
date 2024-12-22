@@ -19,6 +19,7 @@ export const Header = () => {
   const handleSignOut = async () => {
     try {
       await signOut();
+      navigate("/");
       toast.success("Signed out successfully");
     } catch (error) {
       toast.error("Error signing out");
