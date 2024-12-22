@@ -19,7 +19,7 @@ import coverLetterRoutes from './src/routes/coverLetterRoutes';
 import openAiRoutes from './src/routes/openAiRoutes';
 import bugRoutes from './src/routes/bugRoutes';
 import affiliateRoutes from './src/routes/affiliateRoutes';
-
+import newsletterRoutes from './src/routes/newsletterRoutes';
 
 const app = express();
 const port = Number(process.env.PORT) || 3000;
@@ -85,6 +85,7 @@ app.use('/api/cover-letters', coverLetterRoutes);
 app.use('/api/ai', openAiRoutes);
 app.use('/api/bug', bugRoutes);
 app.use('/api/affiliate', affiliateRoutes);
+app.use('/api/newsletter', newsletterRoutes);
 
 app.get('/', (req: Request, res: Response) => {
   res.send('Backend running...');

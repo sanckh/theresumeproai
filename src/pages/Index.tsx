@@ -6,6 +6,7 @@ import { Helmet } from "react-helmet-async";
 import { useEffect } from "react";
 import { trackPageView } from "@/utils/analytics";
 import { ConditionalAd } from "@/components/googleads/ConditionalAd";
+import { NewsletterSignup } from "@/components/NewsletterSignup";
 
 const features = [
   {
@@ -117,6 +118,18 @@ const Index = () => {
                   <p className="text-gray-600">{feature.description}</p>
                 </article>
               ))}
+            </div>
+          </section>
+
+          <section className="newsletter-section mt-16 text-center max-w-2xl mx-auto" aria-labelledby="newsletter-heading">
+            <h2 id="newsletter-heading" className="text-2xl font-semibold mb-4">
+              Stay Updated
+            </h2>
+            <p className="text-gray-600 mb-6">
+              Get the latest career tips, resume strategies, and job search advice delivered to your inbox. Plus, stay informed about new features and updates on TheResumePro AI.
+            </p>
+            <div className="flex justify-center">
+              <NewsletterSignup />
             </div>
           </section>
 
