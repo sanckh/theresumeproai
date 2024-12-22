@@ -18,6 +18,7 @@ import subscriptionRoutes from './src/routes/subscriptionRoutes';
 import coverLetterRoutes from './src/routes/coverLetterRoutes';
 import openAiRoutes from './src/routes/openAiRoutes';
 import bugRoutes from './src/routes/bugRoutes';
+import affiliateRoutes from './src/routes/affiliateRoutes';
 
 
 const app = express();
@@ -83,6 +84,7 @@ app.use('/api/subscription', subscriptionRoutes);
 app.use('/api/cover-letters', coverLetterRoutes);
 app.use('/api/ai', openAiRoutes);
 app.use('/api/bug', bugRoutes);
+app.use('/api/affiliate', affiliateRoutes);
 
 app.get('/', (req: Request, res: Response) => {
   res.send('Backend running...');

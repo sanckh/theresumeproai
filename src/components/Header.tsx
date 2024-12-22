@@ -10,6 +10,7 @@ import {
 } from "./ui/dropdown-menu";
 import { User } from "lucide-react";
 import { toast } from "sonner";
+import { AffiliateDialog } from "./AffiliateDialog";
 
 export const Header = () => {
   const { user, signOut } = useAuth();
@@ -53,6 +54,7 @@ export const Header = () => {
           <Button variant="ghost" asChild>
             <Link to="/pricing">Pricing</Link>
           </Button>
+          <AffiliateDialog />
           {user ? (
             <>
               <Button onClick={handleBuildResume}>
