@@ -9,7 +9,9 @@ import {
   updatePassword,
   EmailAuthProvider,
   reauthenticateWithCredential,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  GoogleAuthProvider,
+  signInWithPopup
 } from "firebase/auth";
 import { auth } from "../config/firebase";
 
@@ -22,6 +24,7 @@ interface AuthContextType {
   onAuthStateChanged: (callback: (user: User | null) => void) => () => void;
   updateUserPassword: (currentPassword: string, newPassword: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -106,17 +109,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const signInWithGoogle = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      console.error("Google sign in error:", error);
+      throw error;
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      signIn, 
-      signUp, 
-      signOut, 
-      loading, 
-      onAuthStateChanged: onAuthStateChangedCallback,
-      updateUserPassword,
-      resetPassword
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        signIn,
+        signUp,
+        signOut,
+        loading,
+        onAuthStateChanged: onAuthStateChangedCallback,
+        updateUserPassword,
+        resetPassword,
+        signInWithGoogle
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
