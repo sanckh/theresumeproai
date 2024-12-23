@@ -51,12 +51,12 @@ export const AffiliateDialog = () => {
 
   return (
     <div>
-      <Button 
-        variant="ghost"
+      <button 
+        className="w-full text-left px-4 py-2 hover:bg-accent rounded-md"
         onClick={() => setOpen(true)}
       >
         Become an Affiliate
-      </Button>
+      </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-[425px]">

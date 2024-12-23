@@ -21,10 +21,13 @@ import { enhanceWithAIAPI } from "@/api/openai";
 import { analytics } from '../config/firebase';
 import { logEvent } from 'firebase/analytics';
 import { getSubscriptionStatus } from '@/api/subscription';
+import { Templates } from "./Templates";
 
 export const ResumeForm = ({ data, onChange }: ResumeFormProps) => {
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false); // Start with templates hidden
+  const [selectedTemplate, setSelectedTemplate] = useState("modern");
   const navigate = useNavigate();
   const { canUseFeature, hasSubscriptionAccess, subscriptionStatus, refreshSubscription } = useSubscription();
   const { user } = useAuth();
@@ -40,6 +43,52 @@ export const ResumeForm = ({ data, onChange }: ResumeFormProps) => {
     education: data?.education || [],
     skills: data?.skills || ""
   };
+
+  const createNewResume = (template: string = "modern") => {
+    const newResumeData = {
+      fullName: "",
+      email: "",
+      phone: "",
+      summary: "",
+      jobs: [],
+      education: [],
+      skills: "",
+    };
+    onChange("template", template);
+    Object.entries(newResumeData).forEach(([field, value]) => {
+      onChange(field, value);
+    });
+    toast.success("Created new resume with selected template");
+  };
+
+  if (showTemplates) {
+    return (
+      <div className="space-y-6">
+        <Templates
+          selectedTemplate={selectedTemplate}
+          onSelectTemplate={setSelectedTemplate}
+        />
+        <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 mt-6">
+          <Button
+            onClick={() => setShowTemplates(false)}
+            variant="outline"
+            className="w-full sm:w-auto order-1 sm:order-none"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={() => {
+              createNewResume(selectedTemplate);
+              setShowTemplates(false);
+            }}
+            className="w-full sm:w-auto"
+          >
+            Continue with Selected Template
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const handleChange = (field: string, value: unknown) => {
     onChange(field, value);

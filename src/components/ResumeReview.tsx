@@ -185,87 +185,105 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
 
   return (
     <div className="space-y-6">
-      <Card className="p-6">
-        <div className="bg-blue-50 p-4 rounded-lg mb-6">
-          <p className="text-blue-700">
-            Get expert feedback on your resume! Upload your resume below and our AI will analyze it for content, formatting, and ATS optimization. 
-            We'll provide detailed suggestions to help you stand out to recruiters and pass applicant tracking systems.
-          </p>
-        </div>
+      <div className="flex flex-col sm:flex-row gap-4">
+        <Button
+          variant={resumeSource === "upload" ? "default" : "outline"}
+          className="flex-1 gap-2"
+          onClick={() => setResumeSource("upload")}
+        >
+          <FileUp className="h-4 w-4" />
+          Upload Resume
+        </Button>
+        <Button
+          variant={resumeSource === "saved" ? "default" : "outline"}
+          className="flex-1 gap-2"
+          onClick={() => setResumeSource("saved")}
+          disabled={!savedResume}
+        >
+          <Save className="h-4 w-4" />
+          Use Saved Resume
+        </Button>
+      </div>
 
-        <div className="grid gap-6">
-          <Tabs value={resumeSource} onValueChange={(value) => setResumeSource(value as "upload" | "saved")}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="upload" className="flex items-center gap-2">
-                <FileUp className="h-4 w-4" />
-                Upload Resume
-              </TabsTrigger>
-              <TabsTrigger value="saved" className="flex items-center gap-2">
-                <Save className="h-4 w-4" />
-                Use Saved Resume
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="upload" className="mt-4">
-              <Card className="p-4">
-                <div className="flex items-center gap-4">
-                  <Input
-                    type="file"
-                    accept={Object.keys(SUPPORTED_FILE_TYPES).join(",")}
-                    onChange={handleFileChange}
-                    disabled={isUploading}
-                    ref={fileInputRef}
-                  />
-                  {isUploading && <Loader2 className="h-4 w-4 animate-spin" />}
+      {resumeSource === "upload" && (
+        <div className="space-y-4">
+          <Card className="p-6">
+            <div className="space-y-4">
+              <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-6 cursor-pointer hover:border-primary/50 transition-colors"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="h-8 w-8 text-gray-400 mb-2" />
+                <p className="text-sm text-gray-600">
+                  Click to upload or drag and drop
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Supported formats: PDF, DOC, DOCX, TXT
+                </p>
+              </div>
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept={Object.keys(SUPPORTED_FILE_TYPES).join(",")}
+                onChange={handleFileChange}
+              />
+              {isUploading && (
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Uploading...
                 </div>
-                {isUploading && (
-                  <Alert className="mt-4">
-                    <AlertDescription>
-                      Processing your resume... This may take a few moments.
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="saved" className="mt-4">
-              <Card className="p-4">
-                {savedResume ? (
-                  <Alert>
-                    <AlertDescription>
-                      Using saved resume: {savedResume.name}
-                    </AlertDescription>
-                  </Alert>
-                ) : (
-                  <Alert>
-                    <AlertDescription>
-                      No resume selected. Please select a resume from the dropdown in the top menu.
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </Card>
-            </TabsContent>
-          </Tabs>
-
-          <Button
-            onClick={handleAnalyzeResume}
-            className="w-full"
-            disabled={isUploading || (!parsedResume && resumeSource === "upload") || shouldAnalyze}
-          >
-            {shouldAnalyze ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Analyzing...
-              </>
-            ) : (
-              <>
-                <Upload className="mr-2 h-4 w-4" />
-                Analyze Resume
-              </>
-            )}
-          </Button>
+              )}
+              {file && (
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <div className="flex-1 truncate">{file.name}</div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setFile(null);
+                      setParsedResume(null);
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = "";
+                      }
+                    }}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              )}
+            </div>
+          </Card>
         </div>
-      </Card>
+      )}
+
+      {resumeSource === "saved" && savedResume && (
+        <Card className="p-6">
+          <div className="space-y-4">
+            <h3 className="font-medium">Using your saved resume</h3>
+            <p className="text-sm text-gray-600">
+              We'll analyze the resume you created in the builder.
+            </p>
+          </div>
+        </Card>
+      )}
+
+      <Button
+        onClick={handleAnalyzeResume}
+        className="w-full"
+        disabled={isUploading || (!parsedResume && resumeSource === "upload") || shouldAnalyze}
+      >
+        {shouldAnalyze ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Analyzing...
+          </>
+        ) : (
+          <>
+            <Upload className="mr-2 h-4 w-4" />
+            Analyze Resume
+          </>
+        )}
+      </Button>
 
       {analysis && (
         <div className="space-y-4">

@@ -40,10 +40,22 @@ export default function CoverLetterForm({ resume }: CoverLetterFormProps) {
   const { canUseFeature, hasSubscriptionAccess, subscriptionStatus, refreshSubscription } = useSubscription();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const hasCareerProAccess = canUseFeature('career_pro');
   const hasAnyTrialsRemaining = (subscriptionStatus?.trials?.resume_creator?.remaining > 0) || 
     (subscriptionStatus?.trials?.resume_pro?.remaining > 0) || 
     (subscriptionStatus?.trials?.career_pro?.remaining > 0);
+
+  const [resumeSource, setResumeSource] = useState<"upload" | "saved">("saved");
+  const [file, setFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [parsedResume, setParsedResume] = useState<ParsedResume | null>(null);
+  const [companyName, setCompanyName] = useState("");
+  const [jobTitle, setJobTitle] = useState("");
+  const [jobDescription, setJobDescription] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedLetter, setGeneratedLetter] = useState("");
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
 
   useEffect(() => {
     if (!hasCareerProAccess && !hasAnyTrialsRemaining && subscriptionStatus?.status !== 'active') {
@@ -118,7 +130,7 @@ export default function CoverLetterForm({ resume }: CoverLetterFormProps) {
     }
   };
 
-  const handleGenerateCoverLetter = async () => {
+  const handleGenerateLetter = async () => {
     if (!user?.uid) {
       toast.error("Please sign in to generate a cover letter");
       return;
@@ -128,13 +140,13 @@ export default function CoverLetterForm({ resume }: CoverLetterFormProps) {
       const subscription_type = subscriptionStatus?.tier || 'FREE';
       logEvent(analytics, 'generate_cover_letter_clicked', {
         subscription_type,
-        has_job_url: Boolean(jobUrl),
+        has_job_url: Boolean(jobTitle),
         resume_source: resumeSource
       });
     }
 
-    if (!jobDescription && !jobUrl) {
-      toast.error("Please enter either a job description or a job URL");
+    if (!jobDescription && !jobTitle) {
+      toast.error("Please enter either a job description or a job title");
       return;
     }
 
@@ -174,9 +186,9 @@ export default function CoverLetterForm({ resume }: CoverLetterFormProps) {
           user.uid,
           parsedResume,
           jobDescription,
-          jobUrl
+          jobTitle
         );
-        setGeneratedCoverLetter(coverLetter);
+        setGeneratedLetter(coverLetter);
         toast.success("Cover letter generated successfully!");
         await refreshSubscription();
       } catch (error) {
@@ -207,9 +219,9 @@ export default function CoverLetterForm({ resume }: CoverLetterFormProps) {
         user.uid,
         parsedResume,
         jobDescription,
-        jobUrl
+        jobTitle
       );
-      setGeneratedCoverLetter(coverLetter);
+      setGeneratedLetter(coverLetter);
       toast.success("Cover letter generated successfully!");
       await refreshSubscription();
     } catch (error) {
@@ -220,186 +232,165 @@ export default function CoverLetterForm({ resume }: CoverLetterFormProps) {
     }
   };
 
-  const [jobDescription, setJobDescription] = useState("");
-  const [jobUrl, setJobUrl] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
-  const [generatedCoverLetter, setGeneratedCoverLetter] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [parsedResume, setParsedResume] = useState<ParsedResume | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [resumeSource, setResumeSource] = useState<"upload" | "saved">(resume ? "saved" : "upload");
-  const [isDownloading, setIsDownloading] = useState(false);
-  const coverLetterRef = useRef<HTMLDivElement>(null);
-
-  const handleDownloadPDF = async () => {
-    if (!coverLetterRef.current) return;
-    
-    try {
-      setIsDownloading(true);
-      
-      const canvas = await html2canvas(coverLetterRef.current, {
-        scale: 2, // Higher quality
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff'
-      });
-      
-      const imgWidth = 210; // A4 width in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      
-      const pdf = new jsPDF({
-        orientation: imgHeight > imgWidth ? 'portrait' : 'landscape',
-        unit: 'mm'
-      });
-      
-      const imgData = canvas.toDataURL('image/jpeg', 1.0);
-      pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
-      
-      pdf.save('cover-letter.pdf');
-      toast.success('Cover letter downloaded successfully!');
-    } catch (error) {
-      console.error('Error downloading PDF:', error);
-      toast.error('Failed to download cover letter');
-    } finally {
-      setIsDownloading(false);
-    }
-  };
-
   return (
-    <div className="space-y-4 p-4">
-      <Card className="p-6 space-y-6">
-        <div className="bg-blue-50 p-4 rounded-lg mb-6">
-          <p className="text-blue-700">
-            Create a tailored cover letter by providing your resume and job details. You can either upload a new resume or use one of your saved resumes. 
-            Our AI will analyze the job requirements and your experience to generate a compelling cover letter that highlights your relevant qualifications.
-          </p>
-        </div>
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row gap-4">
+        <Button
+          variant={resumeSource === "upload" ? "default" : "outline"}
+          className="flex-1 gap-2"
+          onClick={() => setResumeSource("upload")}
+        >
+          <FileUp className="h-4 w-4" />
+          Upload Resume
+        </Button>
+        <Button
+          variant={resumeSource === "saved" ? "default" : "outline"}
+          className="flex-1 gap-2"
+          onClick={() => setResumeSource("saved")}
+          disabled={!resume}
+        >
+          <Save className="h-4 w-4" />
+          Use Saved Resume
+        </Button>
+      </div>
 
-        <div className="grid gap-6">
-          <Tabs value={resumeSource} onValueChange={(value) => setResumeSource(value as "upload" | "saved")}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="upload" className="flex items-center gap-2">
-                <FileUp className="h-4 w-4" />
-                Upload Resume
-              </TabsTrigger>
-              <TabsTrigger value="saved" className="flex items-center gap-2">
-                <Save className="h-4 w-4" />
-                Use Saved Resume
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="upload" className="mt-4">
-              <Card className="p-4">
-                <div className="flex items-center gap-4">
-                  <Input
-                    type="file"
-                    accept=".pdf,.doc,.docx,.txt"
-                    onChange={handleFileUpload}
-                    disabled={isUploading}
-                  />
-                  {isUploading && <Loader2 className="h-4 w-4 animate-spin" />}
-                </div>
-                {isUploading && (
-                  <Alert className="mt-4">
-                    <AlertDescription>
-                      Processing your resume... This may take a few moments.
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="saved" className="mt-4">
-              <Card className="p-4">
-                {resume ? (
-                  <Alert>
-                    <AlertDescription>
-                      Using saved resume: {resume.name}
-                    </AlertDescription>
-                  </Alert>
-                ) : (
-                  <Alert>
-                    <AlertDescription>
-                      No resume selected. Please select a resume from the dropdown in the top menu.
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </Card>
-            </TabsContent>
-          </Tabs>
-
-          <div className="grid w-full gap-4">
+      {resumeSource === "upload" && (
+        <div className="space-y-4">
+          <Card className="p-6">
             <div className="space-y-4">
-              <div>
-                <Label>Job Description</Label>
-                <Textarea
-                  value={jobDescription}
-                  onChange={(e) => setJobDescription(e.target.value)}
-                  placeholder="Paste the job description here"
-                />
-              </div>
-              <div className="text-center font-medium">OR</div>
-              <div>
-                <Label>Job URL</Label>
-                <Input
-                  value={jobUrl}
-                  onChange={(e) => setJobUrl(e.target.value)}
-                  placeholder="Enter the job posting URL"
-                />
-              </div>
-            </div>
-          </div>
-          <Button
-            onClick={handleGenerateCoverLetter}
-            className="w-full"
-            disabled={isGenerating || isUploading || (!parsedResume && resumeSource === "upload")}
-          >
-            {isGenerating ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Wand2 className="mr-2 h-4 w-4" />
-                Generate Cover Letter
-              </>
-            )}
-          </Button>
-        </div>
-      </Card>
-
-      {generatedCoverLetter && (
-        <Card className="p-4">
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <Label>Generated Cover Letter</Label>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDownloadPDF}
-                disabled={isDownloading}
-                className="flex items-center gap-2"
+              <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-6 cursor-pointer hover:border-primary/50 transition-colors"
+                onClick={() => fileInputRef.current?.click()}
               >
-                {isDownloading ? (
+                <Upload className="h-8 w-8 text-gray-400 mb-2" />
+                <p className="text-sm text-gray-600">
+                  Click to upload or drag and drop
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Supported formats: PDF, DOC, DOCX, TXT
+                </p>
+              </div>
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept={Object.keys(SUPPORTED_FILE_TYPES).join(",")}
+                onChange={handleFileUpload}
+              />
+              {isUploading && (
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Download className="h-4 w-4" />
-                )}
-                {isDownloading ? "Downloading..." : "Download PDF"}
-              </Button>
+                  Uploading...
+                </div>
+              )}
+              {file && (
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <div className="flex-1 truncate">{file.name}</div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setFile(null);
+                      setParsedResume(null);
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = "";
+                      }
+                    }}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              )}
             </div>
-            <div ref={coverLetterRef} className="bg-white p-8">
+          </Card>
+        </div>
+      )}
+
+      {resumeSource === "saved" && resume && (
+        <Card className="p-6">
+          <div className="space-y-4">
+            <h3 className="font-medium">Using your saved resume</h3>
+            <p className="text-sm text-gray-600">
+              We'll use the information from your resume to help generate a matching cover letter.
+            </p>
+          </div>
+        </Card>
+      )}
+
+      <div className="space-y-4">
+        <Card className="p-6">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="company">Company Name</Label>
+              <Input
+                id="company"
+                placeholder="Enter the company name"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="jobTitle">Job Title</Label>
+              <Input
+                id="jobTitle"
+                placeholder="Enter the job title"
+                value={jobTitle}
+                onChange={(e) => setJobTitle(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="jobDescription">Job Description</Label>
               <Textarea
-                value={generatedCoverLetter}
-                onChange={(e) => setGeneratedCoverLetter(e.target.value)}
-                className="min-h-[400px] font-serif text-base leading-relaxed"
+                id="jobDescription"
+                placeholder="Paste the job description here"
+                value={jobDescription}
+                onChange={(e) => setJobDescription(e.target.value)}
+                className="h-32"
               />
             </div>
           </div>
         </Card>
-      )}
+
+        <Button
+          onClick={handleGenerateLetter}
+          className="w-full gap-2"
+          disabled={!parsedResume || isGenerating || (!companyName && !jobTitle && !jobDescription)}
+        >
+          {isGenerating ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <Wand2 className="h-4 w-4" />
+              Generate Cover Letter
+            </>
+          )}
+        </Button>
+
+        {generatedLetter && (
+          <Card className="p-6">
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="font-medium">Generated Cover Letter</h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => downloadTextAsFile(generatedLetter, 'cover-letter.txt')}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download
+                </Button>
+              </div>
+              <Textarea
+                value={generatedLetter}
+                onChange={(e) => setGeneratedLetter(e.target.value)}
+                className="h-96 font-serif"
+              />
+            </div>
+          </Card>
+        )}
+      </div>
 
       {showUpgradeDialog && (
         <UpgradeDialog
