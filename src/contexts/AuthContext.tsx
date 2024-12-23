@@ -11,7 +11,9 @@ import {
   reauthenticateWithCredential,
   sendPasswordResetEmail,
   GoogleAuthProvider,
-  signInWithPopup
+  signInWithPopup,
+  getRedirectResult,
+  signInWithRedirect
 } from "firebase/auth";
 import { auth } from "../config/firebase";
 
@@ -58,6 +60,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw error;
     }
   };
+
+  useEffect(() => {
+    const handleRedirectResult = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result?.user) {
+          console.log("User successfully signed in via redirect:", result.user);
+        }
+      } catch (error) {
+        console.error("Error handling redirect:", error);
+      }
+    };
+
+    handleRedirectResult();
+  }, []);
 
   const signUp = async (email: string, password: string) => {
     try {
@@ -112,7 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithGoogle = async () => {
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
+      await signInWithRedirect(auth, provider);
     } catch (error) {
       console.error("Google sign in error:", error);
       throw error;
