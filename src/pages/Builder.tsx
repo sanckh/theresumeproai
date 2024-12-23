@@ -276,8 +276,8 @@ const Builder = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
+      <main className="container mx-auto py-8">
+        <div className="max-w-[1400px] mx-auto">
           <h1 className="text-3xl font-bold mb-6">Resume Builder</h1>
 
           <div className="space-y-6">
@@ -393,7 +393,7 @@ const Builder = () => {
                   <TabsTrigger value="cover-letter">Cover Letter</TabsTrigger>
                 </TabsList>
                 <TabsContent value="builder" className="space-y-4">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-[65%_35%] gap-6">
                     <div className="space-y-6">
                       <ResumeForm
                         data={resumeData.data}
