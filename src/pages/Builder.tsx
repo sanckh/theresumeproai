@@ -277,7 +277,7 @@ const Builder = () => {
     <div className="min-h-screen bg-background">
       <Header />
       <main className="container mx-auto py-8">
-        <div className="max-w-[1400px] mx-auto">
+        <div className="max-w-[1600px] mx-auto">
           <h1 className="text-3xl font-bold mb-6">Resume Builder</h1>
 
           <div className="space-y-6">
@@ -410,10 +410,10 @@ const Builder = () => {
                     </div>
                   </div>
                 </TabsContent>
-                <TabsContent value="review">
+                <TabsContent value="review" className="max-w-[1400px] mx-auto">
                   <ResumeReview savedResume={resumeData} />
                 </TabsContent>
-                <TabsContent value="cover-letter">
+                <TabsContent value="cover-letter" className="max-w-[1400px] mx-auto">
                   <CoverLetterForm resume={resumeData} />
                 </TabsContent>
               </Tabs>
