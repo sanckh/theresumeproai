@@ -110,14 +110,9 @@ export const Header = () => {
           </DropdownMenu>
         </>
       ) : (
-        <>
-          <Button variant="outline" asChild className="whitespace-nowrap">
-            <Link to="/auth?signup=true">Create Account</Link>
-          </Button>
-          <Button asChild className="whitespace-nowrap">
-            <Link to="/auth">Sign In</Link>
-          </Button>
-        </>
+        <Button asChild size="sm">
+          <Link to="/auth">Sign In/Up</Link>
+        </Button>
       )}
     </>
   );
