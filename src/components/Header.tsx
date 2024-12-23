@@ -149,8 +149,8 @@ export const Header = () => {
   );
 
   return (
-    <header className="border-b">
-      <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+    <header className="border-b w-full">
+      <div className="container mx-auto px-4 py-4 flex justify-between items-center max-w-full">
         <Link to="/" className="flex items-center space-x-2">
           <span className="text-xl md:text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent whitespace-nowrap">
             AI Resume Pro

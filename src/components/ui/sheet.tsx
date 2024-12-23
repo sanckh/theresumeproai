@@ -55,21 +55,17 @@ const SheetContent = React.forwardRef<
   SheetContentProps
 >(({ className, children, side, ...props }, ref) => (
   <SheetPortal>
-    <SheetOverlay className="fixed inset-0 z-50 bg-black/50" />
+    <SheetOverlay />
     <SheetPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed inset-y-0 z-50 h-full bg-background p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
+        "fixed inset-y-0 z-50 h-full w-[90%] max-w-[300px] bg-background p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
         side === "left" && "left-0 border-r data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left",
         side === "right" && "right-0 border-l data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right",
         className
       )}
       {...props}
-      aria-describedby="sheet-description"
     >
-      <div id="sheet-description" className="sr-only">
-        Navigation menu for the application
-      </div>
       {children}
       <SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
         <X className="h-4 w-4" />
