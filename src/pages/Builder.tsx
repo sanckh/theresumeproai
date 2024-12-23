@@ -274,7 +274,7 @@ const Builder = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex-1">
       <Header />
       <main className="container mx-auto py-8">
         <div className="max-w-[1600px] mx-auto">

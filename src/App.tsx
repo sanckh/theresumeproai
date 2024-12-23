@@ -15,8 +15,12 @@ import Success from "./pages/Success";
 import SubscriptionConfirm from "./pages/SubscriptionConfirm";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import RefundPolicy from "./pages/RefundPolicy";
+import TermsOfService from "./pages/TermsOfService";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import { trackPageView } from './utils/analytics';
 import { useEffect } from 'react';
+import { Footer } from "@/components/Footer";
 
 const queryClient = new QueryClient();
 
@@ -41,19 +45,25 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <RouteChangeTracker />
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/builder" element={<Builder />} />
-              <Route path="/pricing" element={<Pricing />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/templates" element={<Templates />} />
-              <Route path="/history" element={<History />} />
-              <Route path="/success" element={<Success />} />
-              <Route path="/subscription-confirm" element={<SubscriptionConfirm />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <div className="min-h-screen flex flex-col">
+              <RouteChangeTracker />
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/builder" element={<Builder />} />
+                <Route path="/pricing" element={<Pricing />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/templates" element={<Templates />} />
+                <Route path="/history" element={<History />} />
+                <Route path="/success" element={<Success />} />
+                <Route path="/subscription-confirm" element={<SubscriptionConfirm />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/refund" element={<RefundPolicy />} />
+                <Route path="/terms" element={<TermsOfService />} />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+              <Footer />
+            </div>
           </BrowserRouter>
         </TooltipProvider>
       </SubscriptionProvider>
