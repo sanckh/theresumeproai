@@ -11,11 +11,17 @@ import {
 import { User } from "lucide-react";
 import { toast } from "sonner";
 import { AffiliateDialog } from "./AffiliateDialog";
+import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import { reportBug } from "@/api/bug";
 
 export const Header = () => {
   const { user, signOut } = useAuth();
   const { canUseFeature } = useSubscription();
   const navigate = useNavigate();
+  const [bugReportOpen, setBugReportOpen] = useState(false);
+  const [bugReport, setBugReport] = useState({ title: "", description: "" });
+  const [submitting, setSubmitting] = useState(false);
 
   const handleSignOut = async () => {
     try {
@@ -24,6 +30,21 @@ export const Header = () => {
       toast.success("Signed out successfully");
     } catch (error) {
       toast.error("Error signing out");
+    }
+  };
+
+  const handleBugReport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await reportBug(bugReport.title, bugReport.description);
+      setBugReportOpen(false);
+      setBugReport({ title: "", description: "" });
+      toast.success("Bug report submitted successfully");
+    } catch (error) {
+      toast.error("Failed to submit bug report");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -73,6 +94,9 @@ export const Header = () => {
                   <DropdownMenuItem disabled>
                     History (coming soon)
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setBugReportOpen(true)}>
+                    Report a Problem
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleSignOut}>
                     Sign Out
                   </DropdownMenuItem>
@@ -91,6 +115,47 @@ export const Header = () => {
           )}
         </nav>
       </div>
+
+      <Dialog open={bugReportOpen} onOpenChange={setBugReportOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Report a Problem</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleBugReport} className="space-y-4">
+            <div>
+              <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+                Title
+              </label>
+              <input
+                type="text"
+                id="title"
+                value={bugReport.title}
+                onChange={(e) => setBugReport({ ...bugReport, title: e.target.value })}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+                Description
+              </label>
+              <textarea
+                id="description"
+                value={bugReport.description}
+                onChange={(e) => setBugReport({ ...bugReport, description: e.target.value })}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                rows={4}
+                required
+              />
+            </div>
+            <div className="flex justify-end">
+              <Button type="submit" disabled={submitting}>
+                {submitting ? "Submitting..." : "Submit Report"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </header>
   );
 };
