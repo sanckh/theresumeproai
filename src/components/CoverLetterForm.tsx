@@ -58,22 +58,6 @@ export default function CoverLetterForm({ resume }: CoverLetterFormProps) {
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
 
   useEffect(() => {
-    if (!hasCareerProAccess && !hasAnyTrialsRemaining && subscriptionStatus?.status !== 'active') {
-      toast.message(
-        "You've used all your trial credits", 
-        {
-          description: "Make sure to save or download your cover letter before leaving. Visit our pricing page to continue using all features.",
-          duration: 15000,
-          action: {
-            label: "View Plans",
-            onClick: () => navigate('/pricing')
-          }
-        }
-      );
-    }
-  }, [hasCareerProAccess, hasAnyTrialsRemaining, subscriptionStatus?.status, navigate]);
-
-  useEffect(() => {
     if (resume) {
       const parsed: ParsedResume = {
         sections: {

@@ -35,7 +35,7 @@ type SavedResume = ResumeData;
 
 const Builder = () => {
   const { user, loading: authLoading } = useAuth();
-  const { canUseFeature, subscriptionStatus } = useSubscription();
+  const { canUseFeature, subscriptionStatus, loading: subscriptionLoading } = useSubscription();
   const canCreate = canUseFeature("resume_creator");
   const canReview = canUseFeature("resume_pro");
   const canCoverLetter = canUseFeature("career_pro");
@@ -111,11 +111,17 @@ const Builder = () => {
   }, [user, authLoading, navigate]);
 
   useEffect(() => {
+    const hasNoFeatureAccess = !canCreate && !canReview && !canCoverLetter;
+
     if (
-      !canCreate &&
+      !subscriptionLoading &&
+      subscriptionStatus &&
+      hasNoFeatureAccess &&
       !hasAnyTrialsRemaining &&
-      subscriptionStatus?.status !== "active"
+      subscriptionStatus.status !== "active" &&
+      subscriptionStatus.hasStartedTrial // Changed to show only if they HAVE started a trial
     ) {
+
       toast.message("You've used all your trial credits", {
         description:
           "Make sure to save or download your resume before leaving. Visit our pricing page to continue using all features.",
@@ -126,7 +132,7 @@ const Builder = () => {
         },
       });
     }
-  }, [canCreate, hasAnyTrialsRemaining, subscriptionStatus?.status, navigate]);
+  }, [canCreate, canReview, canCoverLetter, hasAnyTrialsRemaining, subscriptionStatus, navigate, subscriptionLoading]);
 
   useEffect(() => {
     const loadSavedResumes = async () => {
