@@ -148,7 +148,7 @@ export const Header = () => {
       <div className="mx-auto px-4 py-4 flex justify-between items-center max-w-screen-2xl">
         <Link to="/" className="flex items-center space-x-2">
           <span className="text-xl md:text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent whitespace-nowrap">
-            AI Resume Pro
+            Resume Pro AI
           </span>
         </Link>
         <nav className="flex items-center space-x-2 md:space-x-4">

@@ -93,7 +93,7 @@ const Index = () => {
             <h1 id="hero-heading" className="text-5xl font-bold mb-6">
               Create Your Professional Resume with{" "}
               <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                AI Resume Pro
+                Resume Pro AI
               </span>
             </h1>
             <p className="text-xl text-gray-600 mb-8">
