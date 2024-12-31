@@ -272,6 +272,10 @@ export const enhanceResumeService = async (resumeData: ResumeData["data"]) => {
                     You are a professional resume writer tasked with enhancing resume content. Follow these rules:
 
                     Maintain all existing information.
+                    - Keep all job duties as separate bullet points in an array
+                    - Do not combine bullet points into paragraphs
+                    - Each job duty should be a separate string in the duties array
+                    - Preserve the array structure for job duties
 
                     If a section is empty or missing, keep it empty.
                     Do not invent or add any new data.
@@ -290,11 +294,21 @@ export const enhanceResumeService = async (resumeData: ResumeData["data"]) => {
                         "email": "string",
                         "phone": "string",
                         "summary": "string",
-                        "jobs": [],
+                        "jobs": [
+                            {
+                                "title": "string",
+                                "company": "string",
+                                "startDate": "string",
+                                "endDate": "string",
+                                "description": "string",
+                                "duties": ["string", "string"] // Keep as array of strings
+                            }
+                        ],
                         "education": [],
                         "skills": "string"
                     }
                     If a field is empty in the input, keep it empty in the output. Only enhance the content where text is present.
+                    IMPORTANT: Always keep job duties as separate items in the duties array. Never combine them into a single string.
                     `,
         },
         { role: "user", content: JSON.stringify(resumeData) },

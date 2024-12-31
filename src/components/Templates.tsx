@@ -32,16 +32,16 @@ const templates: Template[] = [
     id: "classic",
     name: "Classic Executive",
     description: "Traditional layout ideal for management and corporate positions",
-    previewStyles: "text-black bg-white border border-gray-400 italic",
+    previewStyles: "text-black bg-white border border-gray-400 font-['Times_New_Roman']",
     preview: (
       <div className="text-left p-2">
-        <h1 className="text-3xl font-serif font-bold">Your Name</h1>
-        <p className="text-sm text-gray-600">email@example.com • (123) 456-7890</p>
+        <h1 className="text-3xl font-bold">Your Name</h1>
+        <p className="text-sm text-[#4B5563]">email@example.com • (123) 456-7890</p>
         <hr className="my-2 border-gray-400" />
-        <h2 className="text-lg font-semibold text-gray-700">Job Title</h2>
-        <p className="text-sm">Company Name</p>
-        <p className="text-xs text-gray-500">Jan 2022 - Present</p>
-        <ul className="list-disc list-inside text-sm">
+        <h2 className="text-lg font-semibold text-[#374151]">Job Title</h2>
+        <p className="text-sm text-[#4B5563] italic">Company Name</p>
+        <p className="text-xs text-gray-500 italic">Jan 2022 - Present</p>
+        <ul className="list-disc list-inside text-sm text-[#374151]">
           <li>Developed scalable solutions for enterprise applications</li>
         </ul>
       </div>

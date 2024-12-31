@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import html2canvas from "html2canvas";
+import { ModernPDFTemplate, ClassicExecutivePDFTemplate, MinimalPDFTemplate } from "@/components/pdf";
+import { pdf } from '@react-pdf/renderer';
 import jsPDF from "jspdf";
 import {
   DropdownMenu,
@@ -288,30 +289,35 @@ const Builder = () => {
   };
 
   const handleDownloadPDF = async () => {
-    if (!previewRef.current) return;
-
     try {
       setIsDownloading(true);
 
-      const canvas = await html2canvas(previewRef.current, {
-        scale: 2, // Higher quality
-        useCORS: true,
-        logging: false,
-        backgroundColor: "#ffffff",
-      });
+      // Select the appropriate template based on current selection
+      const TemplateComponent = {
+        modern: ModernPDFTemplate,
+        classic: ClassicExecutivePDFTemplate,
+        minimal: MinimalPDFTemplate,
+      }[selectedTemplate];
 
-      const imgWidth = 210; // A4 width in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      // Create the PDF blob
+      const blob = await pdf(
+        <TemplateComponent data={resumeData} />
+      ).toBlob();
 
-      const pdf = new jsPDF({
-        orientation: imgHeight > imgWidth ? "portrait" : "landscape",
-        unit: "mm",
-      });
+      // Create a URL for the blob
+      const url = URL.createObjectURL(blob);
 
-      const imgData = canvas.toDataURL("image/jpeg", 1.0);
-      pdf.addImage(imgData, "JPEG", 0, 0, imgWidth, imgHeight);
+      // Create a link element and trigger the download
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${currentResumeName || "resume"}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
 
-      pdf.save(`${currentResumeName || "resume"}.pdf`);
+      // Clean up the URL
+      URL.revokeObjectURL(url);
+
       toast.success("Resume downloaded successfully!");
     } catch (error) {
       console.error("Error downloading PDF:", error);
@@ -479,7 +485,7 @@ const Builder = () => {
                         builder on a desktop or laptop computer.
                       </p>
                     </div>
-                    <div className="flex flex-col lg:grid lg:grid-cols-[minmax(0,_1fr)_400px] gap-6">
+                    <div className="flex flex-col lg:grid lg:grid-cols-[minmax(0,_1fr)_400px] xl:grid-cols-[minmax(0,_1fr)_600px] gap-6">
                       <div className="w-full min-w-0">
                         <div className="space-y-4">
                           {showTemplates ? (
@@ -490,6 +496,7 @@ const Builder = () => {
                                   setSelectedTemplate(templateId);
                                   setShowTemplates(false);
                                 }}
+                                showTemplateNames
                               />
                               <div className="flex justify-end">
                                 <Button
@@ -522,9 +529,9 @@ const Builder = () => {
                           )}
                         </div>
                       </div>
-                      <div ref={previewRef} className="w-full lg:w-[400px]">
-                        <ResumePreview
-                          data={resumeData}
+                      <div ref={previewRef} className="w-full lg:w-[400px] xl:w-[600px]">
+                        <ResumePreview 
+                          data={resumeData} 
                           template={selectedTemplate}
                         />
                       </div>

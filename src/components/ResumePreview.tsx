@@ -47,9 +47,9 @@ export const ResumePreview = ({
   const getTemplateClasses = () => {
     switch (template) {
       case "classic":
-        return "font-serif text-black italic";
+        return "font-['Times_New_Roman'] text-black";
       case "minimal":
-        return "font-mono";
+        return "font-mono text-black";
       default:
         return "font-sans text-gray-800";
     }
@@ -58,22 +58,44 @@ export const ResumePreview = ({
   const getHeaderClasses = () => {
     switch (template) {
       case "classic":
-        return "text-3xl font-bold mb-2";
+        return "text-[30px] font-bold mb-2 text-black";
       case "minimal":
-        return "text-2xl font-bold mb-2 uppercase";
+        return "text-[24px] font-bold mb-2 uppercase text-black";
       default:
-        return "text-4xl font-extrabold tracking-tight text-gray-900 mb-3";
+        return "text-[32px] font-extrabold text-blue-600 mb-3";
     }
   };
 
   const getSectionClasses = () => {
     switch (template) {
       case "classic":
-        return "border-b border-gray-400 pb-4 mb-6";
+        return "border-b border-[#9CA3AF] pb-4 mb-6";
       case "minimal":
         return "border-t-2 border-black pt-4 mb-6";
       default:
         return "border-b border-gray-300 pb-4 mb-6";
+    }
+  };
+
+  const getSectionTitleClasses = () => {
+    switch (template) {
+      case "classic":
+        return "text-[18px] font-extrabold mb-2 text-[#374151]";
+      case "minimal":
+        return "text-[16px] font-extrabold mb-2 text-black uppercase";
+      default:
+        return "text-[20px] font-bold mb-2 text-blue-600";
+    }
+  };
+
+  const getJobTitleClasses = () => {
+    switch (template) {
+      case "classic":
+        return "font-bold text-[#374151]";
+      case "minimal":
+        return "font-bold text-black uppercase";
+      default:
+        return "font-bold text-blue-600";
     }
   };
 
@@ -84,7 +106,9 @@ export const ResumePreview = ({
         style={{
           width: '100%',
           minHeight: '100vh',
-          maxWidth: '8.5in'
+          maxWidth: '8.5in',
+          height: 'auto',
+          overflow: 'visible'
         }}
       >
         <div
@@ -98,10 +122,14 @@ export const ResumePreview = ({
                 template === "minimal" ? "" : getSectionClasses()
               }`}
             >
-              <h1 className={`${getHeaderClasses()} text-lg sm:text-xl md:text-2xl mb-2`}>
+              <h1 className={getHeaderClasses()}>
                 {data.data.fullName || "Your Name"}
               </h1>
-              <div className="text-gray-600 flex flex-wrap items-center justify-center gap-2 text-xs sm:text-sm">
+              <div className={`flex flex-wrap items-center justify-center gap-2 ${
+                template === "classic" ? "text-[14px] text-[#4B5563]" : 
+                template === "minimal" ? "text-[12px] text-black" :
+                "text-[13px] text-gray-600"
+              }`}>
                 {data.data.email && (
                   <span className="break-all">{data.data.email}</span>
                 )}
@@ -112,31 +140,23 @@ export const ResumePreview = ({
             </div>
 
             {data.data.summary && (
-              <section
-                className={`break-inside-avoid print:break-inside-avoid ${getSectionClasses()}`}
-              >
-                <h2
-                  className={`text-base sm:text-lg font-bold mb-2 break-after-avoid print:break-after-avoid ${
-                    template === "minimal" ? "uppercase" : ""
-                  }`}
-                >
+              <section className={`break-inside-avoid print:break-inside-avoid ${getSectionClasses()}`}>
+                <h2 className={getSectionTitleClasses()}>
                   Summary
                 </h2>
-                <p className="text-gray-700 leading-relaxed whitespace-pre-line text-xs sm:text-sm">
+                <p className={`leading-relaxed whitespace-pre-line ${
+                  template === "classic" ? "text-[#374151]" :
+                  template === "minimal" ? "text-black" :
+                  "text-gray-700"
+                }`}>
                   {data.data.summary}
                 </p>
               </section>
             )}
 
             {data.data.jobs?.length > 0 && (
-              <section
-                className={`break-inside-avoid print:break-inside-avoid ${getSectionClasses()}`}
-              >
-                <h2
-                  className={`text-base sm:text-lg font-bold mb-4 break-after-avoid print:break-after-avoid ${
-                    template === "minimal" ? "uppercase" : ""
-                  }`}
-                >
+              <section className={`break-inside-avoid print:break-inside-avoid ${getSectionClasses()}`}>
+                <h2 className={getSectionTitleClasses()}>
                   Experience
                 </h2>
                 <div className="space-y-4">
@@ -147,40 +167,46 @@ export const ResumePreview = ({
                     >
                       <div className="flex flex-col sm:flex-row justify-between items-start mb-2 gap-1">
                         <div>
-                          <h3
-                            className={`text-lg sm:text-base font-bold ${
-                              template === "modern"
-                                ? "text-primary"
-                                : template === "classic"
-                                ? "text-gray-700"
-                                : "text-gray-800"
-                            }`}
-                          >
+                          <h3 className={getJobTitleClasses()}>
                             {job.title}
                           </h3>
-                          <p
-                            className={`${
-                              template === "classic" ? "italic" : "font-semibold"
-                            } ${
-                              template === "modern"
-                                ? "text-gray-600"
-                                : "text-primary-600"
-                            } sm:text-sm`}
-                          >
+                          <p className={
+                            template === "classic" ? "text-[#4B5563] italic" :
+                            template === "minimal" ? "text-black" :
+                            "text-gray-600"
+                          }>
                             {job.company}
                           </p>
                         </div>
-                        <p className="text-sm sm:text-xs text-gray-500 whitespace-nowrap">
+                        <p 
+                          className={`text-gray-500 whitespace-nowrap ${
+                            template === "classic" ? "text-[14px] italic" :
+                            template === "minimal" ? "text-[12px]" :
+                            "text-[13px]"
+                          }`}
+                        >
                           {job.startDate} - {job.endDate || "Present"}
                         </p>
                       </div>
                       {job.description && (
-                        <p className="mt-2 mb-3 text-gray-700 leading-relaxed sm:text-sm">
+                        <p 
+                          className={`mt-2 mb-3 leading-relaxed ${
+                            template === "classic" ? "text-[#374151]" :
+                            template === "minimal" ? "text-black" :
+                            "text-gray-700"
+                          }`}
+                        >
                           {job.description}
                         </p>
                       )}
                       {job.duties && job.duties.length > 0 && (
-                        <ul className="list-disc list-inside space-y-1 text-gray-700 pl-4 sm:text-sm">
+                        <ul 
+                          className={`list-disc list-inside space-y-1 ${
+                            template === "classic" ? "text-[#374151]" :
+                            template === "minimal" ? "text-black" :
+                            "text-gray-700"
+                          } pl-4`}
+                        >
                           {job.duties.map((duty, dutyIndex) => (
                             <li key={dutyIndex} className="leading-relaxed">
                               {duty}
@@ -195,14 +221,8 @@ export const ResumePreview = ({
             )}
 
             {data.data.education?.length > 0 && (
-              <section
-                className={`break-inside-avoid print:break-inside-avoid ${getSectionClasses()}`}
-              >
-                <h2
-                  className={`text-base sm:text-lg font-bold mb-4 break-after-avoid print:break-after-avoid ${
-                    template === "minimal" ? "uppercase" : ""
-                  }`}
-                >
+              <section className={`break-inside-avoid print:break-inside-avoid ${getSectionClasses()}`}>
+                <h2 className={getSectionTitleClasses()}>
                   Education
                 </h2>
                 <div className="space-y-4">
@@ -213,35 +233,35 @@ export const ResumePreview = ({
                     >
                       <div className="flex flex-col sm:flex-row justify-between items-start gap-1">
                         <div>
-                          <h3
-                            className={`text-lg sm:text-base font-bold ${
-                              template === "modern"
-                                ? "text-primary"
-                                : template === "classic"
-                                ? "text-gray-700"
-                                : "text-gray-800"
+                          <h3 
+                            className={`font-bold ${
+                              template === "classic" ? "text-[#374151]" :
+                              template === "minimal" ? "text-black uppercase" :
+                              "text-blue-600"
                             }`}
                           >
                             {edu.institution}
                           </h3>
                           {edu.degree && (
-                            <p
-                              className={`${
-                                template === "classic"
-                                  ? "italic"
-                                  : "font-semibold"
-                              } ${
-                                template === "modern"
-                                  ? "text-gray-600"
-                                  : "text-primary-600"
-                              } sm:text-sm`}
+                            <p 
+                              className={`text-gray-600 ${
+                                template === "classic" ? "text-[14px]" :
+                                template === "minimal" ? "text-[12px]" :
+                                "text-[13px]"
+                              }`}
                             >
                               {edu.degree}
                             </p>
                           )}
                         </div>
                         {edu.endDate && (
-                          <p className="text-sm sm:text-xs text-gray-500">
+                          <p 
+                            className={`text-gray-500 whitespace-nowrap ${
+                              template === "classic" ? "text-[14px] italic" :
+                              template === "minimal" ? "text-[12px]" :
+                              "text-[13px]"
+                            }`}
+                          >
                             Graduated: {edu.endDate}
                           </p>
                         )}
@@ -253,19 +273,17 @@ export const ResumePreview = ({
             )}
 
             {data.data.skills && (
-              <section
-                className={`break-inside-avoid print:break-inside-avoid ${
-                  template === "minimal" ? "" : getSectionClasses()
-                }`}
-              >
-                <h2
-                  className={`text-base sm:text-lg font-bold mb-3 break-after-avoid print:break-after-avoid ${
-                    template === "minimal" ? "uppercase" : ""
-                  }`}
-                >
+              <section className={`break-inside-avoid print:break-inside-avoid ${template === "minimal" ? "" : getSectionClasses()}`}>
+                <h2 className={getSectionTitleClasses()}>
                   Skills
                 </h2>
-                <p className="text-gray-700 leading-relaxed sm:text-sm">
+                <p 
+                  className={`leading-relaxed ${
+                    template === "classic" ? "text-[#374151]" :
+                    template === "minimal" ? "text-black" :
+                    "text-gray-700"
+                  }`}
+                >
                   {data.data.skills.split(",").map((skill, index, array) => (
                     <span key={index}>
                       {skill.trim()}
