@@ -135,7 +135,8 @@ export function Pricing() {
               <h2 id="pricing-promise" className="text-xl font-semibold mb-3">Our Pricing Promise</h2>
               <p className="text-muted-foreground">
                 We believe in transparent pricing with no hidden fees. All plans include unlimited exports 
-                and updates. Not satisfied? Get a full refund within the first 30 days.
+                and updates. We offer a 30-day limited money-back guarantee for qualifying reasons such as technical issues 
+                or service not meeting advertised capabilities.
               </p>
             </div>
             <section className="mb-12 flex justify-center">

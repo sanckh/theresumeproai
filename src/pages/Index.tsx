@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Badge } from "@/components/ui/badge";
 import { Helmet } from "react-helmet-async";
@@ -7,6 +7,9 @@ import { useEffect } from "react";
 import { trackPageView } from "@/utils/analytics";
 import { ConditionalAd } from "@/components/googleads/ConditionalAd";
 import { NewsletterSignup } from "@/components/NewsletterSignup";
+import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/contexts/SubscriptionContext";
+import { toast } from "sonner";
 
 const features = [
   {
@@ -31,6 +34,31 @@ const Index = () => {
   useEffect(() => {
     trackPageView('Index', '/');
   }, []);
+
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { startTrial, subscriptionStatus, refreshSubscription } = useSubscription();
+
+  const handleStartTrial = async () => {
+    if (!user) {
+      navigate("/auth");
+      return;
+    }
+
+    try {
+      if (!subscriptionStatus?.hasStartedTrial) {
+        await startTrial();
+        await refreshSubscription();
+        toast.success("Trial started! You now have access to all premium features.");
+        navigate('/builder');
+      } else {
+        navigate('/pricing');
+      }
+    } catch (error) {
+      console.error("Error starting trial:", error);
+      toast.error("Failed to start trial");
+    }
+  };
 
   return (
     <>
@@ -99,9 +127,14 @@ const Index = () => {
             <p className="text-xl text-gray-600 mb-8">
               Build beautiful, ATS-friendly resumes in minutes. Get expert feedback and land your dream job faster.
             </p>
-            <div className="cta-buttons space-x-4">
-              <Button asChild size="lg">
-                <Link to="/pricing" aria-label="View our pricing plans">View Pricing Plans</Link>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+              {(!user || !subscriptionStatus?.hasStartedTrial) && (
+                <Button size="lg" onClick={handleStartTrial} className="w-full sm:w-auto">
+                  {!user ? "Sign In to Start Free Trial" : "Start Free Trial"}
+                </Button>
+              )}
+              <Button size="lg" variant="outline" asChild className="w-full sm:w-auto">
+                <Link to="/pricing">View Pricing</Link>
               </Button>
             </div>
           </section>
