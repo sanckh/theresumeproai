@@ -22,5 +22,3 @@ export const ConditionalAutoAds: React.FC = () => {
 
   return null;
 };
-
-export default ConditionalAutoAds;
