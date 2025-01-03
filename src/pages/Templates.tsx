@@ -1,6 +1,5 @@
 import { Header } from "@/components/Header";
 import { Templates as TemplateGrid } from "@/components/Templates";
-import { ConditionalAd } from "@/components/googleads/ConditionalAd";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 
@@ -28,10 +27,6 @@ const Templates = () => {
           </p>
           
           <TemplateGrid showTemplateNames={true} />
-
-          <section className="mb-8 flex justify-center">
-            <ConditionalAd adSlot="3368712053" />
-          </section>
         </div>
       </main>
     </div>

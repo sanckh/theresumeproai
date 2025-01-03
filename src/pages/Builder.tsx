@@ -28,7 +28,6 @@ import { ResumeData } from "@/interfaces/resumeData";
 import { JobEntry } from "@/interfaces/jobEntry";
 import { EducationEntry } from "@/interfaces/educationEntry";
 import CoverLetterForm from "@/components/CoverLetterForm";
-import { ConditionalAd } from "@/components/googleads/ConditionalAd";
 
 const STORAGE_KEY = "saved_resume";
 
@@ -551,9 +550,6 @@ const Builder = () => {
                   </TabsContent>
                 </Tabs>
               </div>
-              <section className="mb-8 flex justify-center">
-                <ConditionalAd adSlot="7871063844" />
-              </section>
             </div>
           </div>
         </div>
