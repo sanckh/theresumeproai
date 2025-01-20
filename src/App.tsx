@@ -49,17 +49,16 @@ function App() {
             <BrowserRouter>
               <div className="min-h-screen flex flex-col">
                 <RouteChangeTracker />
-                <ConditionalAutoAds />
                 <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/builder" element={<Builder />} />
-                  <Route path="/pricing" element={<Pricing />} />
+                  <Route path="/" element={<><ConditionalAutoAds /><Index /></>} />
+                  <Route path="/builder" element={<><ConditionalAutoAds /><Builder /></>} />
+                  <Route path="/pricing" element={<><ConditionalAutoAds /><Pricing /></>} />
+                  <Route path="/templates" element={<><ConditionalAutoAds /><Templates /></>} />
                   <Route path="/auth" element={<Auth />} />
-                  <Route path="/templates" element={<Templates />} />
                   <Route path="/history" element={<History />} />
                   <Route path="/success" element={<Success />} />
                   <Route path="/subscription-confirm" element={<SubscriptionConfirm />} />
-                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/settings" element={<><ConditionalAutoAds /><Settings /></>} />
                   <Route path="/refund" element={<RefundPolicy />} />
                   <Route path="/terms" element={<TermsOfService />} />
                   <Route path="/privacy" element={<PrivacyPolicy />} />
