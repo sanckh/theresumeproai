@@ -3,13 +3,14 @@ const API_URL = import.meta.env.VITE_API_URL;
 import { ParsedResume } from "@/interfaces/parsedResume";
 import { ResumeData } from "@/interfaces/resumeData";
 import { auth } from "@/config/firebase";
+import { ResumeContent } from "@/interfaces/resumeContent";
 
 const getAuthHeader = async () => {
   const token = await auth.currentUser?.getIdToken();
   return { Authorization: `Bearer ${token}` };
 };
 
-export const parseResumeAPI = async (userId: string, resumeText: string): Promise<ParsedResume> => {
+export const parseResumeAPI = async (userId: string, resumeText: string): Promise<ResumeContent> => {
   try {
     const headers = await getAuthHeader();
     const response = await fetch(`${API_URL}/ai/parse-resume/${userId}`, {
@@ -35,7 +36,7 @@ export const parseResumeAPI = async (userId: string, resumeText: string): Promis
 
 export const analyzeResumeAPI = async (
   userId: string,
-  resumeData: string | ParsedResume
+  resumeData: string | ResumeContent
 ): Promise<{
   score: number;
   suggestions: string[];

@@ -12,14 +12,15 @@ import { toast } from "sonner";
 import { ModernPDFTemplate, ClassicExecutivePDFTemplate, MinimalPDFTemplate } from "@/components/pdf";
 import { pdf } from '@react-pdf/renderer';
 import jsPDF from "jspdf";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Save, ChevronDown, Edit2, Loader2, FileText } from "lucide-react";
-import { getAllResumes, getResume, saveResume } from "@/api/resume";
+import { Save, ChevronDown, Edit2, Loader2, FileText, Trash2 } from "lucide-react";
+import { getAllResumes, getResume, saveResume, deleteResume } from "@/api/resume";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -28,6 +29,8 @@ import { ResumeData } from "@/interfaces/resumeData";
 import { JobEntry } from "@/interfaces/jobEntry";
 import { EducationEntry } from "@/interfaces/educationEntry";
 import CoverLetterForm from "@/components/CoverLetterForm";
+import { parseDocument } from "@/utils/documentParser";
+import { ResumeContent } from "@/interfaces/resumeContent";
 
 const STORAGE_KEY = "saved_resume";
 
@@ -66,12 +69,18 @@ const Builder = () => {
   const [currentResumeId, setCurrentResumeId] = useState<string | null>(null);
   const [currentResumeName, setCurrentResumeName] = useState("Untitled Resume");
   const [isEditingName, setIsEditingName] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
-  // Handle template selection from /templates page
+  const SUPPORTED_FILE_TYPES = {
+    "application/pdf": "PDF",
+    "application/msword": "DOC",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "DOCX",
+    "text/plain": "TXT",
+  } as const;
+
   useEffect(() => {
     if (location.state?.template) {
       setSelectedTemplate(location.state.template);
-      // Only create new resume if coming from templates page
       if (location.pathname === "/templates") {
         setResumeData({
           id: "",
@@ -90,7 +99,6 @@ const Builder = () => {
         setCurrentResumeId(null);
         setCurrentResumeName("Untitled Resume");
         toast.success("Created new resume with selected template");
-        // Clear the state to prevent recreation on refresh
         navigate(".", { replace: true });
       }
     }
@@ -108,7 +116,7 @@ const Builder = () => {
     if (!authLoading && !user) {
       navigate("/auth");
     }
-  }, [user, authLoading, navigate]);
+  }, [user?.uid, authLoading, navigate]);
 
   useEffect(() => {
     const hasNoFeatureAccess = !canCreate && !canReview && !canCoverLetter;
@@ -140,7 +148,6 @@ const Builder = () => {
 
       try {
         const resumes = await getAllResumes(user.uid);
-        // Convert ResumeData[] to SavedResume[] and sort by updated_at
         const savedResumesList: SavedResume[] = resumes
           .map((resume) => ({
             id: resume.id || "",
@@ -158,7 +165,6 @@ const Builder = () => {
 
         setSavedResumes(savedResumesList);
 
-        // Automatically load the most recent resume if available
         if (savedResumesList.length > 0) {
           const mostRecent = savedResumesList[0];
           setCurrentResumeId(mostRecent.id);
@@ -172,9 +178,8 @@ const Builder = () => {
     };
 
     loadSavedResumes();
-  }, [user]);
+  }, [user?.uid]);
 
-  // Load local storage resume if no user is logged in
   useEffect(() => {
     if (!user?.uid) {
       const savedResume = localStorage.getItem(STORAGE_KEY);
@@ -194,17 +199,14 @@ const Builder = () => {
         toast.info("Loaded your previously saved resume");
       }
     }
-  }, [user, currentResumeName]);
+  }, [user?.uid, currentResumeName]);
 
   const handleChange = (field: keyof ResumeData["data"], value: unknown) => {
     setResumeData((prev) => {
-      // Create a new data object with the updated field
       const newData = {
         ...prev.data,
         [field]: value,
       };
-
-      // Return the complete ResumeData structure
       return {
         ...prev,
         data: newData,
@@ -229,7 +231,6 @@ const Builder = () => {
 
   const handleSaveResume = async () => {
     if (!user?.uid) {
-      // Save to local storage if user is not logged in
       try {
         localStorage.setItem(
           STORAGE_KEY,
@@ -248,16 +249,21 @@ const Builder = () => {
 
     setIsSaving(true);
     try {
+      const originalResume = savedResumes.find(resume => resume.id === currentResumeId);
+      const isNewName = originalResume && originalResume.name !== currentResumeName;
+      
+      const saveAsNew = isNewName || !currentResumeId;
+      
       const resumeId = await saveResume(
         user.uid,
         resumeData.data,
         currentResumeName,
-        currentResumeId || undefined
+        saveAsNew ? undefined : currentResumeId
       );
 
       setCurrentResumeId(resumeId);
+      
       const updatedResumes = await getAllResumes(user.uid);
-      // Convert ResumeData[] to SavedResume[]
       const savedResumesList: SavedResume[] = updatedResumes.map((resume) => ({
         id: resume.id || "",
         user_id: resume.user_id,
@@ -268,7 +274,7 @@ const Builder = () => {
       }));
       setSavedResumes(savedResumesList);
 
-      toast.success("Resume saved successfully");
+      toast.success(saveAsNew ? "Created new resume" : "Resume updated successfully");
     } catch (error) {
       console.error("Error saving resume:", error);
       toast.error("Failed to save resume");
@@ -281,7 +287,6 @@ const Builder = () => {
     const newName = prompt("Enter a name for this resume:", currentResumeName);
     if (newName) {
       setCurrentResumeName(newName);
-      // Reset current resume ID to create a new resume
       setCurrentResumeId(null);
       await handleSaveResume();
     }
@@ -291,22 +296,18 @@ const Builder = () => {
     try {
       setIsDownloading(true);
 
-      // Select the appropriate template based on current selection
       const TemplateComponent = {
         modern: ModernPDFTemplate,
         classic: ClassicExecutivePDFTemplate,
         minimal: MinimalPDFTemplate,
       }[selectedTemplate];
 
-      // Create the PDF blob
       const blob = await pdf(
         <TemplateComponent data={resumeData} />
       ).toBlob();
 
-      // Create a URL for the blob
       const url = URL.createObjectURL(blob);
 
-      // Create a link element and trigger the download
       const link = document.createElement('a');
       link.href = url;
       link.download = `${currentResumeName || "resume"}.pdf`;
@@ -314,7 +315,6 @@ const Builder = () => {
       link.click();
       document.body.removeChild(link);
 
-      // Clean up the URL
       URL.revokeObjectURL(url);
 
       toast.success("Resume downloaded successfully!");
@@ -323,6 +323,84 @@ const Builder = () => {
       toast.error("Failed to download resume");
     } finally {
       setIsDownloading(false);
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!user?.uid) {
+      toast.error("Please sign in to upload a resume");
+      return;
+    }
+
+    if (!(file.type in SUPPORTED_FILE_TYPES)) {
+      toast.error(`Unsupported file type. Please upload a ${Object.values(SUPPORTED_FILE_TYPES).join(", ")} file.`);
+      return;
+    }
+
+    setIsUploading(true);
+    toast.info(
+      "Please be patient while we process your resume. We use advanced AI models for the best results, which may take a moment.",
+      { duration: 8000 }
+    );
+
+    try {
+      setCurrentResumeId(null);
+      setResumeData({
+        id: "",
+        user_id: user!.uid,
+        name: "Untitled Resume",
+        data: {
+          fullName: "",
+          email: "",
+          phone: "",
+          summary: "",
+          jobs: [],
+          education: [],
+          skills: "",
+        },
+      });
+
+      const parsedResume = await parseDocument(file, user!.uid);
+      
+      console.log("Raw parsed resume:", parsedResume);
+
+      // Map the parsed resume data directly to our interface
+      const mappedData: ResumeContent = {
+        fullName: parsedResume.fullName || "",
+        email: parsedResume.email || "",
+        phone: parsedResume.phone || "",
+        summary: parsedResume.summary || "",
+        jobs: parsedResume.jobs || [],
+        education: parsedResume.education || [],
+        skills: parsedResume.skills || ""
+      };
+
+      console.log("Final mapped resume data:", mappedData);
+
+      setResumeData({
+        id: "",
+        user_id: user!.uid,
+        name: file.name.replace(/\.[^/.]+$/, ""),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        data: mappedData
+      });
+      setCurrentResumeName(file.name.replace(/\.[^/.]+$/, ""));
+      toast.success("Resume uploaded successfully!");
+      
+      // Show beta warning toast
+      toast.info(
+        "Resume upload to builder is in beta. Some manual adjustments may be needed for the best results.", 
+        { duration: 6000 } // Show for 6 seconds
+      );
+    } catch (error) {
+      console.error("Error uploading resume:", error);
+      toast.error("Failed to upload resume. Please try again.");
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -342,23 +420,17 @@ const Builder = () => {
                       value={currentResumeName}
                       onChange={(e) => setCurrentResumeName(e.target.value)}
                       onBlur={() => setIsEditingName(false)}
-                      onKeyDown={(e) =>
-                        e.key === "Enter" && setIsEditingName(false)
-                      }
-                      className="w-64"
+                      onKeyDown={(e) => e.key === "Enter" && setIsEditingName(false)}
+                      className="w-48"
                       autoFocus
                     />
                   ) : (
-                    <div className="text-xl font-semibold flex items-center gap-2">
+                    <h1
+                      className="text-2xl font-semibold cursor-pointer"
+                      onClick={() => setIsEditingName(true)}
+                    >
                       {currentResumeName}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setIsEditingName(true)}
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    </h1>
                   )}
                 </div>
 
@@ -389,6 +461,40 @@ const Builder = () => {
                     )}
                     Download PDF
                   </Button>
+                  <div className="relative">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => document.getElementById("resume-upload")?.click()}
+                      disabled={isUploading}
+                      className="flex items-center gap-2"
+                    >
+                      {isUploading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Uploading...
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="w-4 h-4 mr-2" />
+                          Upload Resume
+                        </>
+                      )}
+                    </Button>
+                    <Badge 
+                      variant="default" 
+                      className="absolute -top-2 -right-2 bg-blue-500 hover:bg-blue-600"
+                    >
+                      New!
+                    </Badge>
+                    <input
+                      type="file"
+                      id="resume-upload"
+                      accept=".pdf,.doc,.docx,.txt"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                  </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
@@ -412,14 +518,58 @@ const Builder = () => {
                       {savedResumes.map((resume) => (
                         <DropdownMenuItem
                           key={resume.id}
-                          onClick={() => {
-                            setCurrentResumeId(resume.id);
-                            setCurrentResumeName(resume.name);
-                            loadResume(resume.id);
-                            toast.info(`Loaded "${resume.name}"`);
-                          }}
+                          className="flex items-center justify-between"
                         >
-                          {resume.name}
+                          <span
+                            className="flex-1 cursor-pointer"
+                            onClick={() => {
+                              setCurrentResumeId(resume.id);
+                              setCurrentResumeName(resume.name);
+                              loadResume(resume.id);
+                              toast.info(`Loaded "${resume.name}"`);
+                            }}
+                          >
+                            {resume.name}
+                          </span>
+                          <Trash2
+                            className="h-4 w-4 text-red-500 hover:text-red-700 cursor-pointer ml-2"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              if (window.confirm(`Are you sure you want to delete "${resume.name}"?`)) {
+                                try {
+                                  await deleteResume(user!.uid, resume.id);
+                                  
+                                  // If we're currently viewing this resume, clear it
+                                  if (currentResumeId === resume.id) {
+                                    setCurrentResumeId(null);
+                                    setCurrentResumeName("Untitled Resume");
+                                    setResumeData({
+                                      id: "",
+                                      user_id: user!.uid,
+                                      name: "Untitled Resume",
+                                      data: {
+                                        fullName: "",
+                                        email: "",
+                                        phone: "",
+                                        summary: "",
+                                        jobs: [],
+                                        education: [],
+                                        skills: "",
+                                      },
+                                    });
+                                  }
+                                  
+                                  // Refresh the resumes list
+                                  const updatedResumes = await getAllResumes(user!.uid);
+                                  setSavedResumes(updatedResumes);
+                                  toast.success(`Deleted "${resume.name}"`);
+                                } catch (error) {
+                                  console.error("Error deleting resume:", error);
+                                  toast.error("Failed to delete resume");
+                                }
+                              }
+                            }}
+                          />
                         </DropdownMenuItem>
                       ))}
                       {savedResumes.length > 0 && (

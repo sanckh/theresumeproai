@@ -13,14 +13,12 @@ import { useNavigate } from "react-router-dom";
 import { UpgradeDialog } from "./UpgradeDialog";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { ResumeContent } from "@/interfaces/resumeContent";
 import { EducationEntry } from "@/interfaces/educationEntry";
 import { JobEntry } from "@/interfaces/jobEntry";
 import { ResumeFormProps } from "@/interfaces/resumeFormProps";
 import { enhanceWithAIAPI } from "@/api/openai";
 import { analytics } from '../config/firebase';
 import { logEvent } from 'firebase/analytics';
-import { getSubscriptionStatus } from '@/api/subscription';
 import { Templates } from "./Templates";
 
 export const ResumeForm = ({ data, onChange }: ResumeFormProps) => {
@@ -39,8 +37,20 @@ export const ResumeForm = ({ data, onChange }: ResumeFormProps) => {
     email: data?.email || "",
     phone: data?.phone || "",
     summary: data?.summary || "",
-    jobs: data?.jobs || [],
-    education: data?.education || [],
+    jobs: data?.jobs?.map(job => ({
+      title: job.title || "",
+      company: job.company || "",
+      startDate: job.startDate || "",
+      endDate: job.endDate || "",
+      description: job.description || "",
+      duties: job.duties || []
+    })) || [],
+    education: data?.education?.map(edu => ({
+      institution: edu.institution || "",
+      degree: edu.degree || "",
+      startDate: edu.startDate || "",
+      endDate: edu.endDate || ""
+    })) || [],
     skills: data?.skills || ""
   };
 
@@ -50,15 +60,29 @@ export const ResumeForm = ({ data, onChange }: ResumeFormProps) => {
       email: "",
       phone: "",
       summary: "",
-      jobs: [],
-      education: [],
-      skills: "",
+      jobs: [{
+        title: "",
+        company: "",
+        startDate: "",
+        endDate: "",
+        description: "",
+        duties: []
+      }],
+      education: [{
+        institution: "",
+        degree: "",
+        startDate: "",
+        endDate: ""
+      }],
+      skills: ""
     };
-    onChange("template", template);
+    
+    // Update each field individually
     Object.entries(newResumeData).forEach(([field, value]) => {
       onChange(field, value);
     });
-    toast.success("Created new resume with selected template");
+    onChange("template", template);
+    setSelectedTemplate(template);
   };
 
   if (showTemplates) {

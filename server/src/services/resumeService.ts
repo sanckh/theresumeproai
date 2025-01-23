@@ -104,3 +104,32 @@ export const getAllResumes = async (userId: string): Promise<ResumeData[]> => {
     throw new Error('Failed to fetch all resumes');
   }
 };
+
+export async function deleteResume(userId: string, resumeId: string): Promise<void> {
+  try {
+    const resumeDoc = await db.collection('resumes').doc(resumeId).get();
+    
+    if (!resumeDoc.exists) {
+      throw new Error('Resume not found');
+    }
+
+    const resumeData = resumeDoc.data() as ResumeData;
+    if (resumeData.user_id !== userId) {
+      throw new Error('Resume not found');
+    }
+
+    await db.collection('resumes').doc(resumeId).delete();
+  } catch (error: unknown) {
+    console.error('Error deleting resume:', error);
+    
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
+    await logToFirestore({
+      eventType: 'ERROR',
+      message: 'Failed to delete resume',
+      data: { error: errorMessage, userId, resumeId },
+      timestamp: new Date().toISOString(),
+    });
+    throw new Error('Failed to delete resume');
+  }
+};

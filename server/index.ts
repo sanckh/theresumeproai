@@ -64,6 +64,9 @@ app.use(cors(corsOptions));
 app.use(requestLogger);
 app.use(apiLimiter);
 
+app.use(bodyParser.json({ limit: '10mb' }));
+app.use(bodyParser.urlencoded({ limit: '10mb', extended: true }));
+
 // Apply JSON body parser to all routes except webhook endpoints
 app.use((req, res, next) => {
   if (

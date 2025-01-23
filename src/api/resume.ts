@@ -47,3 +47,14 @@ export async function getAllResumes(userId: string): Promise<ResumeData[]> {
 
   return response.json();
 }
+
+export async function deleteResume(userId: string, resumeId: string): Promise<void> {
+  const response = await fetch(`${API_URL}/resume/deleteresume/${userId}/${resumeId}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to delete resume');
+  }
+}

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Request, Response } from 'express';
-import { saveResume, getResume, getAllResumes } from '../services/resumeService';
+import { saveResume, getResume, getAllResumes, deleteResume } from '../services/resumeService';
 import { logToFirestore } from '../services/logs_service';
 
 export const handleSaveResume = async (req: Request, res: Response) => {
@@ -110,5 +110,21 @@ export const handleGetAllResumes = async (req: Request, res: Response) => {
     });
 
     res.status(500).json({ error: 'Failed to load resumes' });
+  }
+};
+
+export const handleDeleteResume = async (req: Request, res: Response) => {
+  try {
+    const { userId, resumeId } = req.params;
+
+    if (!userId || !resumeId) {
+      return res.status(400).json({ error: 'Missing required parameters' });
+    }
+
+    await deleteResume(userId, resumeId);
+    res.status(200).json({ message: 'Resume deleted successfully' });
+  } catch (error) {
+    console.error('Error in deleteResume controller:', error);
+    res.status(500).json({ error: 'Failed to delete resume' });
   }
 };

@@ -1,26 +1,21 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
-import { Input } from "./ui/input";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
-import { useQuery } from "@tanstack/react-query";
 import { analyzeResumeAPI } from "@/api/openai";
-import { ParsedResume } from "@/interfaces/parsedResume";
+import { ResumeContent } from "@/interfaces/resumeContent";
 import { parseDocument } from "@/utils/documentParser";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useNavigate } from "react-router-dom";
 import { decrementTrialUse } from "@/api/subscription";
 import { useAuth } from "@/contexts/AuthContext";
 import { UpgradeDialog } from "./UpgradeDialog";
-import { ResumeData } from "@/interfaces/resumeData";
 import { ResumeAnalysis } from "@/interfaces/resumeAnalysis";
 import { ResumeReviewProps } from "@/interfaces/resumeReviewProps";
 import { analytics } from '../config/firebase';
 import { logEvent } from 'firebase/analytics';
-import { getSubscriptionStatus } from '@/api/subscription';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileUp, Save } from "lucide-react";
 
 const SUPPORTED_FILE_TYPES = {
@@ -42,7 +37,7 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [file, setFile] = useState<File | null>(null);
-  const [parsedResume, setParsedResume] = useState<ParsedResume | null>(null);
+  const [parsedResume, setParsedResume] = useState<ResumeContent | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [shouldAnalyze, setShouldAnalyze] = useState(false);
@@ -55,22 +50,14 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
-      const parsed: ParsedResume = {
-        sections: {
-          "Personal Information": `${savedResume.data.fullName}\n${savedResume.data.email}\n${savedResume.data.phone}`,
-          "Summary": savedResume.data.summary,
-          "Experience": savedResume.data.jobs.map(job => 
-            `${job.title} at ${job.company}\n${job.description || ''}\n${job.duties?.join('\n') || ''}`
-          ).join('\n\n'),
-          "Education": savedResume.data.education.map(edu =>
-            `${edu.degree} at ${edu.institution}\n${edu.startDate} - ${edu.endDate}`
-          ).join('\n\n'),
-          "Skills": savedResume.data.skills
-        },
-        metadata: {
-          totalSections: 5,
-          sectionsList: ["Personal Information", "Summary", "Experience", "Education", "Skills"]
-        }
+      const parsed: ResumeContent = {
+        fullName: savedResume.data.fullName,
+        email: savedResume.data.email,
+        phone: savedResume.data.phone,
+        summary: savedResume.data.summary,
+        jobs: savedResume.data.jobs,
+        education: savedResume.data.education,
+        skills: savedResume.data.skills
       };
       setParsedResume(parsed);
       setShouldAnalyze(false);
