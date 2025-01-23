@@ -11,7 +11,6 @@ export async function parseDocument(file: File, userId: string): Promise<ResumeC
   const fileType = file.type;
   let textContent = "";
 
-  console.log("File type:", fileType);
 
   switch (fileType) {
     case "application/pdf":
@@ -30,10 +29,8 @@ export async function parseDocument(file: File, userId: string): Promise<ResumeC
       throw new Error(`Unsupported file type: ${fileType}`);
   }
 
-  console.log("Extracted text content:", textContent);
 
   const resumeContent = await parseResumeAPI(userId, textContent);
-  console.log("Parsed resume data:", resumeContent);
   
   return resumeContent;
 }

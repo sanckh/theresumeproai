@@ -155,7 +155,6 @@ export const ResumeReview = ({ savedResume }: ResumeReviewProps) => {
     }
 
     try {
-      console.log("Decrementing trial usage...");
       await decrementTrialUse(user.uid, 'resume_pro');
       await refreshSubscription();
       setShouldAnalyze(true);

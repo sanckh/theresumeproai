@@ -140,11 +140,7 @@ export default function CoverLetterForm({ resume }: CoverLetterFormProps) {
     }
 
     if (hasCareerProAccess) {
-      console.log("User has Career Pro access");
-      // Only use trial if they don't have subscription access
       if (!hasSubscriptionAccess('career_pro')) {
-        console.log("Using trial access...");
-        // Check if they have trials remaining first
         if (!subscriptionStatus?.trials?.career_pro?.remaining || 
             subscriptionStatus.trials.career_pro.remaining <= 0) {
           setShowUpgradeDialog(true);

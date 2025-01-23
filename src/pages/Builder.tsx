@@ -364,8 +364,6 @@ const Builder = () => {
       });
 
       const parsedResume = await parseDocument(file, user!.uid);
-      
-      console.log("Raw parsed resume:", parsedResume);
 
       // Map the parsed resume data directly to our interface
       const mappedData: ResumeContent = {
@@ -377,8 +375,6 @@ const Builder = () => {
         education: parsedResume.education || [],
         skills: parsedResume.skills || ""
       };
-
-      console.log("Final mapped resume data:", mappedData);
 
       setResumeData({
         id: "",

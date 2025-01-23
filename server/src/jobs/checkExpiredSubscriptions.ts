@@ -21,18 +21,7 @@ import { FieldValue } from 'firebase-admin/firestore';
     const subscriptionEndDateStr = subscriptionData.subscription_end_date; // ISO string
     const subscriptionEndMs = new Date(subscriptionEndDateStr).getTime();
 
-    console.log('Comparing subscription_end_date to now:', subscriptionEndMs, now);
-
-    if (subscriptionEndMs <= now) {
-      console.log('The subscription has expired.');
-    } else if (subscriptionEndMs === now) {
-      console.log('The subscription ends today.');
-    } else {
-      console.log('The subscription is still active.');
-    }
-  } else {
-    console.log('No active subscriptions found to compare.');
-  }
+  } 
 
   try {
     // Query Firestore using ISO strings for lexicographical comparison
@@ -45,7 +34,6 @@ import { FieldValue } from 'firebase-admin/firestore';
       .get();
 
     if (subscriptionsSnapshot.empty) {
-      console.log('No expired subscriptions found.');
       return;
     }
 
@@ -83,7 +71,6 @@ import { FieldValue } from 'firebase-admin/firestore';
       timestamp: new Date().toISOString(),
     });
 
-    console.log(`${processedCount} subscriptions deactivated.`);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error deactivating expired subscriptions:', error);
