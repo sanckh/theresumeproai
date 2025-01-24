@@ -122,7 +122,7 @@ export const classifyResumeSectionAPI = async (
 
 export const generateCoverLetterAPI = async (
   userId: string,
-  resumeData: ResumeData["data"] | ParsedResume,
+  resumeData: ResumeContent,
   jobDescription?: string,
   jobUrl?: string
 ): Promise<string> => {
@@ -135,14 +135,29 @@ export const generateCoverLetterAPI = async (
         ...headers,
       },
       credentials: 'include',
-      body: JSON.stringify({ resumeData, jobDescription, jobUrl }),
+      body: JSON.stringify({
+        resumeData,
+        jobDescription,
+        jobUrl,
+      }),
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
     }
 
-    return await response.json();
+    const data = await response.json();
+    
+    // Handle both object response and direct string response
+    if (typeof data === 'string') {
+      return data;
+    } else if (data && typeof data.coverLetter === 'string') {
+      return data.coverLetter;
+    } else {
+      console.error('Invalid response format:', data);
+      throw new Error('Invalid response format from server');
+    }
   } catch (error) {
     console.error("Error generating cover letter:", error);
     throw error;

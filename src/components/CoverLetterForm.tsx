@@ -9,19 +9,18 @@ import { useSubscription } from "@/contexts/SubscriptionContext";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { auth } from "@/config/firebase";
-import { Loader2, Wand2, Download } from "lucide-react";
+import { Loader2, Wand2, Download, FileText } from "lucide-react";
 import { UpgradeDialog } from "./UpgradeDialog";
 import { CoverLetterFormProps } from "@/interfaces/coverLetterFormProps";
 import { saveCoverLetter } from "@/api/coverLetter";
 import { decrementTrialUse } from "@/api/subscription";
 import { generateCoverLetterAPI } from "@/api/openai";
-import { ParsedResume } from "@/interfaces/parsedResume";
+import { ResumeContent } from "@/interfaces/resumeContent";
 import { parseDocument } from "@/utils/documentParser";
 import { Upload } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileUp, Save } from "lucide-react";
-import { ResumeContent } from "@/interfaces/resumeContent";
 import { analytics } from '../config/firebase';
 import { logEvent } from 'firebase/analytics';
 import { getSubscriptionStatus } from '@/api/subscription';
@@ -49,7 +48,7 @@ export default function CoverLetterForm({ resume }: CoverLetterFormProps) {
   const [resumeSource, setResumeSource] = useState<"upload" | "saved">("saved");
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [parsedResume, setParsedResume] = useState<ParsedResume | null>(null);
+  const [parsedResume, setParsedResume] = useState<ResumeContent | null>(null);
   const [companyName, setCompanyName] = useState("");
   const [jobTitle, setJobTitle] = useState("");
   const [jobDescription, setJobDescription] = useState("");
@@ -59,24 +58,7 @@ export default function CoverLetterForm({ resume }: CoverLetterFormProps) {
 
   useEffect(() => {
     if (resume) {
-      const parsed: ParsedResume = {
-        sections: {
-          "Personal Information": `${resume.data.fullName}\n${resume.data.email}\n${resume.data.phone}`,
-          "Summary": resume.data.summary,
-          "Experience": resume.data.jobs.map(job => 
-            `${job.title} at ${job.company}\n${job.description || ''}\n${job.duties?.join('\n') || ''}`
-          ).join('\n\n'),
-          "Education": resume.data.education.map(edu =>
-            `${edu.degree} at ${edu.institution}\n${edu.startDate} - ${edu.endDate}`
-          ).join('\n\n'),
-          "Skills": resume.data.skills
-        },
-        metadata: {
-          totalSections: 5,
-          sectionsList: ["Personal Information", "Summary", "Experience", "Education", "Skills"]
-        }
-      };
-      setParsedResume(parsed);
+      setParsedResume(resume.data);
     }
   }, [resume]);
 
@@ -125,12 +107,13 @@ export default function CoverLetterForm({ resume }: CoverLetterFormProps) {
       logEvent(analytics, 'generate_cover_letter_clicked', {
         subscription_type,
         has_job_url: Boolean(jobTitle),
+        has_job_description: Boolean(jobDescription),
         resume_source: resumeSource
       });
     }
 
     if (!jobDescription && !jobTitle) {
-      toast.error("Please enter either a job description or a job title");
+      toast.error("Please enter either a job description or job title");
       return;
     }
 
@@ -150,63 +133,44 @@ export default function CoverLetterForm({ resume }: CoverLetterFormProps) {
         try {
           const success = await decrementTrialUse(user.uid, 'career_pro');
           if (!success) {
-            setShowUpgradeDialog(true);
+            toast.error("Failed to use trial. Please try again.");
             return;
           }
+          await refreshSubscription();
         } catch (error) {
-          console.error("Error decrementing trial:", error);
-          toast.error("Failed to use trial");
+          console.error("Error decrementing trial use:", error);
+          toast.error("Failed to use trial. Please try again.");
           return;
         }
       }
-
-      try {
-        setIsGenerating(true);
-        const coverLetter = await generateCoverLetterAPI(
-          user.uid,
-          parsedResume,
-          jobDescription,
-          jobTitle
-        );
-        setGeneratedLetter(coverLetter);
-        toast.success("Cover letter generated successfully!");
-        await refreshSubscription();
-      } catch (error) {
-        console.error("Error generating cover letter:", error);
-        toast.error("Failed to generate cover letter");
-      } finally {
-        setIsGenerating(false);
-      }
-      return;
-    }
-
-    // If no subscription, check for trials
-    if (!subscriptionStatus?.trials?.career_pro?.remaining || 
-        subscriptionStatus.trials.career_pro.remaining <= 0) {
+    } else {
       setShowUpgradeDialog(true);
       return;
     }
 
-    // Has trials remaining, try to decrement
     try {
-      const success = await decrementTrialUse(user.uid, 'career_pro');
-      if (!success) {
-        setShowUpgradeDialog(true);
-        return;
-      }
       setIsGenerating(true);
-      const coverLetter = await generateCoverLetterAPI(
+      const letter = await generateCoverLetterAPI(
         user.uid,
-        parsedResume,
-        jobDescription,
-        jobTitle
+        parsedResume!,
+        jobDescription || jobTitle,
+        ""
       );
-      setGeneratedLetter(coverLetter);
+      
+      if (!letter) {
+        throw new Error("No cover letter was generated");
+      }
+      
+      setGeneratedLetter(letter);
       toast.success("Cover letter generated successfully!");
-      await refreshSubscription();
+      
+      // Scroll to the generated letter
+      setTimeout(() => {
+        document.getElementById('generated-letter')?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
     } catch (error) {
       console.error("Error generating cover letter:", error);
-      toast.error("Failed to generate cover letter");
+      toast.error(error instanceof Error ? error.message : "Failed to generate cover letter. Please try again.");
     } finally {
       setIsGenerating(false);
     }
@@ -214,6 +178,13 @@ export default function CoverLetterForm({ resume }: CoverLetterFormProps) {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center space-x-2">
+        <FileText className="h-5 w-5 text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">
+          Using your {resumeSource === "upload" ? "uploaded" : "saved"} resume: <span className="font-medium text-foreground">{resumeSource === "upload" ? file?.name : resume?.name || 'Uploaded Resume'}</span>
+        </p>
+      </div>
+
       <div className="flex flex-col sm:flex-row gap-4">
         <Button
           variant={resumeSource === "upload" ? "default" : "outline"}
@@ -299,32 +270,31 @@ export default function CoverLetterForm({ resume }: CoverLetterFormProps) {
       <div className="space-y-4">
         <Card className="p-6">
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="company">Company Name</Label>
+            <div>
+              <Label>Company Name</Label>
               <Input
-                id="company"
-                placeholder="Enter the company name"
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
+                placeholder="Enter company name"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="jobTitle">Job Title</Label>
+
+            <div>
+              <Label>Job Title</Label>
               <Input
-                id="jobTitle"
-                placeholder="Enter the job title"
                 value={jobTitle}
                 onChange={(e) => setJobTitle(e.target.value)}
+                placeholder="Enter the job title"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="jobDescription">Job Description</Label>
+
+            <div>
+              <Label>Job Description</Label>
               <Textarea
-                id="jobDescription"
-                placeholder="Paste the job description here"
                 value={jobDescription}
                 onChange={(e) => setJobDescription(e.target.value)}
-                className="h-32"
+                placeholder="Paste the job description here"
+                rows={5}
               />
             </div>
           </div>
@@ -349,23 +319,36 @@ export default function CoverLetterForm({ resume }: CoverLetterFormProps) {
         </Button>
 
         {generatedLetter && (
-          <Card className="p-6">
+          <Card className="p-6" id="generated-letter">
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <h3 className="font-medium">Generated Cover Letter</h3>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => downloadTextAsFile(generatedLetter, 'cover-letter.txt')}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(generatedLetter);
+                      toast.success("Copied to clipboard!");
+                    }}
+                  >
+                    Copy
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => downloadTextAsFile(generatedLetter, 'cover-letter.txt')}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download
+                  </Button>
+                </div>
               </div>
               <Textarea
                 value={generatedLetter}
                 onChange={(e) => setGeneratedLetter(e.target.value)}
-                className="h-96 font-serif"
+                className="h-96 font-serif whitespace-pre-wrap"
+                readOnly
               />
             </div>
           </Card>

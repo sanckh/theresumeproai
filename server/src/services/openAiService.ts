@@ -202,7 +202,7 @@ Return the analysis in this JSON format:
 }`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4-1106-preview",
+      model: "gpt-4-turbo",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: resumeText },
@@ -403,73 +403,94 @@ export const classifySectionService = async (
 };
 
 export const generateCoverLetterService = async (
-  resumeData: ResumeData["data"] | ParsedResume,
+  resumeData: ResumeContent,
   jobDescription?: string,
-  jobUrl?: string
+  jobUrl?: string // keeping parameter for now to avoid breaking changes
 ): Promise<string> => {
-  if (
-    !openai ||
-    !process.env.OPENAI_API_KEY ||
-    process.env.OPENAI_API_KEY === "dummy-key"
-  ) {
-    throw new Error("OpenAI API key not configured");
+  if (!openai) {
+    throw new Error("OpenAI client not initialized");
   }
 
+  const formatJobEntry = (job: JobEntry): string => {
+    return `${job.title} at ${job.company}
+${job.startDate} - ${job.endDate || 'Present'}
+${job.description || ''}
+${job.duties?.join('\n') || ''}`;
+  };
+
+  const formatEducationEntry = (edu: EducationEntry): string => {
+    return `${edu.degree} from ${edu.institution}
+${edu.startDate} - ${edu.endDate || 'Present'}`;
+  };
+
+  const today = new Date().toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
+  });
+
+  const resumeText = `
+Full Name: ${resumeData.fullName}
+Email: ${resumeData.email}
+Phone: ${resumeData.phone}
+
+Summary:
+${resumeData.summary}
+
+Experience:
+${resumeData.jobs.map(formatJobEntry).join('\n\n')}
+
+Education:
+${resumeData.education.map(formatEducationEntry).join('\n\n')}
+
+Skills:
+${resumeData.skills}`;
+
+  const systemPrompt = `You are a professional cover letter writer. Your task is to:
+
+Write a compelling cover letter that:
+- Is professional and engaging
+- Specifically matches the candidate's experience to the job requirements
+- Highlights relevant achievements that demonstrate required skills
+- Shows enthusiasm for the role and company
+- Uses proper business letter formatting
+- Is 300-400 words in length
+
+Important Formatting Rules:
+1. Use the candidate's actual contact information from the resume:
+   - Full Name: ${resumeData.fullName}
+   - Email: ${resumeData.email}
+   - Phone: ${resumeData.phone}
+
+2. Use today's date: ${today}
+
+3. Company Information:
+   - If provided in the job details, use the actual company name
+   - If not provided, use [Company Name]
+
+4. Salutation:
+   - If hiring manager's name is known, use "Dear [Name],"
+   - Otherwise, use "Dear Hiring Manager,"
+
+5. Do not include placeholder text like [Your Address] or [Email] - omit sections where information is not available.
+
+The cover letter should demonstrate a deep understanding of both the job requirements and the candidate's qualifications.
+Return only the cover letter text, with proper line breaks and formatting.`;
+
+  const userPrompt = `Resume:\n${resumeText}\n\nJob Description:\n${jobDescription}\n\nCompany Name: ${jobDescription ? 'Company Name' : '[Company Name]'}`;
+
   try {
-    const systemPrompt = `Refined Prompt
-
-                    You are a professional cover letter writer. Craft a compelling cover letter using the provided candidate background that:
-
-                    Aligns the candidate’s experience with the job requirements.
-                    Highlights relevant achievements and skills.
-                    Demonstrates genuine enthusiasm for the role and company.
-                    Maintains a professional yet engaging tone.
-                    Includes specific examples from the candidate’s experience.
-                    Formatting Requirements
-
-                    Begin with a professional greeting (avoid generic salutations such as “To Whom It May Concern”).
-                    Use 2–3 concise paragraphs to keep the content focused.
-                    Conclude with a professional closing that expresses appreciation or invites further discussion.
-                    Prohibited Elements
-
-                    Do not include a date.
-                    Do not provide physical addresses.
-                    Do not use generic phrases like “To Whom It May Concern.”
-                    Use only the details given, and structure the letter around these points.`;
-
-    let resumeContent: string;
-    if ("sections" in resumeData) {
-      resumeContent = Object.entries(resumeData.sections)
-        .map(([name, content]) => `=== ${name} ===\n${content}`)
-        .join("\n\n");
-    } else {
-      resumeContent = Object.entries(resumeData)
-        .map(([name, content]) => `=== ${name} ===\n${content}`)
-        .join("\n\n");
-    }
-
-    const userMessage = `Resume Content:
-${resumeContent}
-
-Job Description:
-${jobDescription || "No job description provided"}
-
-Job URL:
-${jobUrl || "No job URL provided"}`;
-
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: userMessage },
+        { role: "user", content: userPrompt }
       ],
-      temperature: 0.7,
     });
 
-    const coverLetter = response.choices[0].message?.content;
-
+    const coverLetter = response.choices[0]?.message?.content;
     if (!coverLetter) {
-      throw new Error("No response from OpenAI");
+      throw new Error("No content in OpenAI response");
     }
 
     return coverLetter;
